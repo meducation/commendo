@@ -14,8 +14,10 @@ module Commendo
       redis.flushdb
       key_base = 'CommendoTests'
       cs = ContentSet.new(redis, key_base)
-      cs.add_by_group('group-1', 'resource-1', 'resource-2', 'resource-3')
-      cs.add_by_group('group-2', 'resource-1', 'resource-3', 'resource-4')
+      cs.add('resource-1', 'group-1', 'group-2')
+      cs.add('resource-2', 'group-1')
+      cs.add('resource-3', 'group-1', 'group-2')
+      cs.add('resource-4', 'group-2')
       assert redis.sismember("#{key_base}:sets:resource-1", 'group-1')
       assert redis.sismember("#{key_base}:sets:resource-2", 'group-1')
       assert redis.sismember("#{key_base}:sets:resource-3", 'group-1')
@@ -27,15 +29,13 @@ module Commendo
       assert redis.sismember("#{key_base}:sets:resource-4", 'group-2')
     end
 
-    def test_stores_sets_by_resource
+    def test_stores_sets_by_group
       redis = Redis.new(db: 15)
       redis.flushdb
       key_base = 'CommendoTests'
       cs = ContentSet.new(redis, key_base)
-      cs.add('resource-1', 'group-1', 'group-2')
-      cs.add('resource-2', 'group-1')
-      cs.add('resource-3', 'group-1', 'group-2')
-      cs.add('resource-4', 'group-2')
+      cs.add_by_group('group-1', 'resource-1', 'resource-2', 'resource-3')
+      cs.add_by_group('group-2', 'resource-1', 'resource-3', 'resource-4')
       assert redis.sismember("#{key_base}:sets:resource-1", 'group-1')
       assert redis.sismember("#{key_base}:sets:resource-2", 'group-1')
       assert redis.sismember("#{key_base}:sets:resource-3", 'group-1')
