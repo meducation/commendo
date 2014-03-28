@@ -61,16 +61,30 @@ module Commendo
       expected = [
         { resource:  '9', similarity: 0.5 },
         { resource:  '6', similarity: 0.5 },
-        { resource: '12', similarity: 0.333 },
+        { resource: '12', similarity: 0.33333333333333 },
         { resource:  '3', similarity: 0.25 },
-        { resource: '21', similarity: 0.166 },
-        { resource: '15', similarity: 0.166 }
+        { resource: '21', similarity: 0.16666666666667 },
+        { resource: '15', similarity: 0.16666666666667 }
       ]
       assert_equal expected, cs.similar_to(18)
     end
 
     def test_calculates_with_threshold
-      skip
+      redis = Redis.new(db: 15)
+      redis.flushdb
+      key_base = 'CommendoTests'
+      cs = ContentSet.new(redis, key_base)
+      (3..23).each do |group|
+        (3..23).each do |res|
+          cs.add_by_group(group, res) if res % group == 0
+        end
+      end
+      cs.calculate_similarity(0.4)
+      expected = [
+        { resource:  '9', similarity: 0.5 },
+        { resource:  '6', similarity: 0.5 },
+      ]
+      assert_equal expected, cs.similar_to(18)
     end
 
     def test_calculate_yields_after_each
