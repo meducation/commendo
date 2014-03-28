@@ -30,6 +30,7 @@ module Commendo
     end
 
     def calculate_similarity_in_redis(set_key, similiarity_key, threshold)
+      #TODO maybe consider using ary.combination to get finer grained operation in lua
       redis.eval(similarity_lua, [set_key, similiarity_key], [set_key_base, threshold])
     end
 
