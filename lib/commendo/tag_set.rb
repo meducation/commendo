@@ -21,6 +21,11 @@ module Commendo
       add(resource, *tags)
     end
 
+    def matches(resource, *tags)
+      resource_tags = get(resource)
+      (resource_tags & tags).length > 0
+    end
+
     def delete(resource)
       redis.del(resource_key(resource))
     end

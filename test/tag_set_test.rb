@@ -44,5 +44,26 @@ module Commendo
       assert_equal ['qip', 'qux'], ts.get(2)
     end
 
+    def test_matches_tags
+      redis = Redis.new(db: 15)
+      redis.flushdb
+      ts = TagSet.new(redis, 'TagSetTest')
+      ts.set(1, 'foo', 'bar', 'baz')
+      ts.set(2, 'qux', 'qip')
+
+      assert ts.matches(1, 'foo')
+      assert ts.matches(1, 'bar', 'baz')
+      assert ts.matches(1, 'bar', 'baz', 'foo')
+      refute ts.matches(1, 'qux')
+      refute ts.matches(1, 'qip')
+
+      refute ts.matches(2, 'foo')
+      refute ts.matches(2, 'bar', 'baz')
+      refute ts.matches(2, 'bar', 'baz', 'foo')
+      assert ts.matches(2, 'qux', 'qip')
+      assert ts.matches(2, 'qux')
+      assert ts.matches(2, 'qip')
+    end
+
   end
 end

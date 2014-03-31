@@ -86,15 +86,10 @@ module Commendo
 
     def filtered_similar_to(resource, options = {})
       similar = similar_to(resource)
-      return similar if options[:include].nil? && options[:exclude].nil?
-      similar.delete_if { |s| !options[:exclude].nil? && tags_match(s[:resource], options[:exclude]) }
-      similar.delete_if { |s| !options[:include].nil? && !tags_match(s[:resource], options[:include]) }
+      return similar if @tag_set.nil? || options[:include].nil? && options[:exclude].nil?
+      similar.delete_if { |s| !options[:exclude].nil? && @tag_set.matches(s[:resource], *options[:exclude]) }
+      similar.delete_if { |s| !options[:include].nil? && !@tag_set.matches(s[:resource], *options[:include]) }
       similar
-    end
-
-    def tags_match(resource, tags)
-      resource_tags = tag_set.get(resource)
-      (resource_tags & tags).length > 0
     end
 
     def similarity_key(resource)
@@ -136,7 +131,6 @@ module Commendo
     def group_key_base
       "#{key_base}:groups"
     end
-
 
     def group_key(group)
       "#{group_key_base}:#{group}"
