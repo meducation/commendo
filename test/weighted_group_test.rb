@@ -23,6 +23,7 @@ module Commendo
           @cs2.add_by_group(group, res) if (res % group == 0) && (res % 3 == 0)
           @cs3.add_by_group(group, res) if (res % group == 0) && (res % 6 == 0)
           @tag_set.add(res, 'mod3') if res.modulo(3).zero?
+          @tag_set.add(res, 'mod4') if res.modulo(4).zero?
           @tag_set.add(res, 'mod5') if res.modulo(5).zero?
           @tag_set.add(res, 'mod7') if res.modulo(7).zero?
         end
@@ -57,16 +58,44 @@ module Commendo
         {cs: @cs2, weight: 10.0},
         {cs: @cs3, weight: 100.0}
       )
-      expected = [
-        #{resource: '6', similarity: 55.5},
-        #{resource: '12', similarity: 36.963},
-        #{resource: '9', similarity: 5.0},
-        #{resource: '3', similarity: 2.5},
-        #{resource: '21', similarity: 1.67},
-        {resource: '15', similarity: 1.67}
-      ]
+      expected = [{resource: '15', similarity: 1.67}]
       weighted_group.tag_set = @tag_set
       assert_equal expected, weighted_group.filtered_similar_to(18, include: ['mod5'])
+    end
+
+    def test_filters_exclude_recommendations
+      weighted_group = WeightedGroup.new(
+        @redis,
+        'CommendoTests:WeightedGroup',
+        {cs: @cs1, weight: 1.0},
+        {cs: @cs2, weight: 10.0},
+        {cs: @cs3, weight: 100.0}
+      )
+      expected = [
+        {resource: '6', similarity: 55.5},
+        {resource: '12', similarity: 36.963},
+        {resource: '9', similarity: 5.0},
+        {resource: '3', similarity: 2.5}
+      ]
+      weighted_group.tag_set = @tag_set
+      assert_equal expected, weighted_group.filtered_similar_to(18, exclude: ['mod5', 'mod7'])
+    end
+
+    def test_filters_include_and_exclude_recommendations
+      weighted_group = WeightedGroup.new(
+        @redis,
+        'CommendoTests:WeightedGroup',
+        {cs: @cs1, weight: 1.0},
+        {cs: @cs2, weight: 10.0},
+        {cs: @cs3, weight: 100.0}
+      )
+      expected = [
+        {resource: '16', similarity: 0.667},
+        {resource: '4', similarity: 0.5},
+        {resource: '12', similarity: 0.2}
+      ]
+      weighted_group.tag_set = @tag_set
+      assert_equal expected, weighted_group.filtered_similar_to(8, include: ['mod4'], exclude: ['mod5'])
     end
 
     def test_similar_to_mutliple_items
