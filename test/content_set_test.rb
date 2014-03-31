@@ -235,6 +235,38 @@ module Commendo
 
     end
 
+    def test_recommends_for_many
+      redis = Redis.new(db: 15)
+      redis.flushdb
+      ts = TagSet.new(redis, 'CommendoTests:tags')
+      cs = ContentSet.new(redis, 'CommendoTests', ts)
+      (3..23).each do |group|
+        (3..23).each do |res|
+          cs.add(res, group) if res % group == 0
+          ts.add(res, 'mod3') if res.modulo(3).zero?
+          ts.add(res, 'mod4') if res.modulo(4).zero?
+          ts.add(res, 'mod5') if res.modulo(5).zero?
+        end
+      end
+      cs.calculate_similarity
+      expected = [
+        {resource: '18', similarity: 1.333},
+        {resource: '3', similarity: 1.25},
+        {resource: '6', similarity: 0.833},
+        {resource: '12', similarity: 0.7},
+        {resource: '21', similarity: 0.667},
+        {resource: '15', similarity: 0.667},
+        {resource: '9', similarity: 0.533},
+        {resource: '4', similarity: 0.25},
+        {resource: '8', similarity: 0.2},
+        {resource: '16', similarity: 0.167},
+        {resource: '20', similarity: 0.143}
+      ]
+      actual = cs.similar_to([12, 6, 9])
+      assert_equal expected, actual
+      #, include: ['mod4'], exclude: ['mod3', 'mod5']
+    end
+
     def similar_to(cs, resource, similar)
       contains_resource(similar, cs.similar_to(resource))
     end

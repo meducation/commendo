@@ -68,8 +68,17 @@ module Commendo
     end
 
     def similar_to(resource)
-      similar_resources = redis.zrevrange(similarity_key(resource), 0, -1, with_scores: true)
-
+      if resource.kind_of? Array
+        keys = resource.map do |res|
+          similarity_key(res)
+        end
+        tmp_key = "#{key_base}:tmp:#{SecureRandom.uuid}"
+        redis.zunionstore(tmp_key, keys)
+        similar_resources = redis.zrevrange(tmp_key, 0, -1, with_scores: true)
+        redis.del(tmp_key)
+      else
+        similar_resources = redis.zrevrange(similarity_key(resource), 0, -1, with_scores: true)
+      end
       similar_resources.map do |resource|
         {resource: resource[0], similarity: resource[1].to_f}
       end
