@@ -32,7 +32,6 @@ module Commendo
         if (intersect.length > 0)
           union = redis.sunion(resource_key(l), resource_key(r))
           jaccard = intersect.length / union.length.to_f
-          puts jaccard
           redis.zadd(similarity_key(l), jaccard, r)
           redis.zadd(similarity_key(r), jaccard, l)
         end
