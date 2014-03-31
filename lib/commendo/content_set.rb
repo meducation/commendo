@@ -52,22 +52,23 @@ module Commendo
       #TODO make this use scan for scaling
       keys = redis.keys("#{resource_key_base}:*")
       keys.each_with_index do |key, i|
-        resource = key.gsub(/^#{resource_key_base}:/, '')
-        groups = redis.smembers(resource_key(resource))
-        group_keys = groups.map { |group| group_key(group) }
-        resources = redis.sunion(*group_keys)
-        resources.each do |to_compare|
-          if resource < to_compare
-            intersect = redis.sinter(key, resource_key(to_compare))
-            if (intersect.length > 0)
-              union = redis.sunion(key, resource_key(to_compare))
-              jaccard = intersect.length / union.length.to_f
-              redis.zadd(similarity_key(resource), jaccard, to_compare) unless jaccard < threshold
-              redis.zadd(similarity_key(to_compare), jaccard, resource) unless jaccard < threshold
-            end
-          end
-        end
         yield(key, i, keys.length) if block_given?
+        redis.eval(similarity_lua, keys: [key], argv: [resource_key_base, similar_key_base, group_key_base, threshold])
+        #resource = key.gsub(/^#{resource_key_base}:/, '')
+        #groups = redis.smembers(resource_key(resource))
+        #group_keys = groups.map { |group| group_key(group) }
+        #resources = redis.sunion(*group_keys)
+        #resources.each do |to_compare|
+        #  if resource < to_compare
+        #    intersect = redis.sinter(key, resource_key(to_compare))
+        #    if (intersect.length > 0)
+        #      union = redis.sunion(key, resource_key(to_compare))
+        #      jaccard = intersect.length / union.length.to_f
+        #      redis.zadd(similarity_key(resource), jaccard, to_compare) unless jaccard < threshold
+        #      redis.zadd(similarity_key(to_compare), jaccard, resource) unless jaccard < threshold
+        #    end
+        #  end
+        #end
       end
 
       #keys.each_with_index do |outer_key, i|
@@ -130,8 +131,13 @@ module Commendo
       "#{resource_key_base}:#{resource}"
     end
 
+    def group_key_base
+      "#{key_base}:groups"
+    end
+
+
     def group_key(group)
-      "#{key_base}:groups:#{group}"
+      "#{group_key_base}:#{group}"
     end
 
   end

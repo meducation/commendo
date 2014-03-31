@@ -21,7 +21,7 @@ module Commendo
       redis.del(tmp_key)
 
       similar_resources.map do |resource|
-        {resource: resource[0], similarity: resource[1].to_f}
+        {resource: resource[0], similarity: resource[1].to_f.round(3)}
       end
 
     end
