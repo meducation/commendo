@@ -1,29 +1,56 @@
-local left_key = KEYS[1]
-local right_key = KEYS[2]
-local left_similarity_key = KEYS[3]
-local right_similarity_key = KEYS[4]
-
-local left = tonumber(ARGV[1])
-local right = tonumber(ARGV[2])
-local threshold = tonumber(ARGV[3])
+local resource_key = KEYS[1]
+local resource_key_base = ARGV[1]
+local sim_key_base = ARGV[2]
+local group_key_base = ARGV[3]
+local threshold = tonumber(ARGV[4])
 
 local function round(num, idp)
   local mult = 10^(idp or 0)
   return math.floor(num * mult + 0.5) / mult
 end
 
-redis.log(redis.LOG_NOTICE, 'Running similarity for ' .. resource_key)
+redis.log(redis.LOG_NOTICE, 'Running complete similarity for ' .. resource_key)
 
-local intersect = table.getn(redis.call('SINTER', left_key, right_key))
-if intersect > 0 then
-    local union = table.getn(redis.call('SUNION', left_key, right_key))
-    local similarity = round(intersect / union, 3)
-    if similarity > threshold then
-        redis.call('ZADD', left_similarity_key, similarity, right)
-        redis.call('ZADD', right_similarity_key, similarity, left)
+local resource = resource_key:gsub('%' .. resource_key_base .. ':', '')
+local groups = redis.call('smembers', resource_key)
+
+if table.getn(groups) > 999 then
+    redis.log(redis.LOG_NOTICE, 'Complete similarity too large for ' .. resource_key .. ', ' .. table.getn(groups))
+	return 999
+end
+
+local group_keys = {}
+for _,group in ipairs(groups) do
+    table.insert(group_keys, group_key_base .. ':' .. group)
+end
+--redis.log(redis.LOG_NOTICE, 'Found ' .. table.getn(group_keys) .. ' group keys')
+
+local resources = redis.call('sunion', unpack(group_keys))
+
+--local resources = redis.call('sunion', unpack(group_keys))
+--redis.log(redis.LOG_NOTICE, 'Found ' .. table.getn(resources) .. ' resources')
+
+local previous = 'foo'
+for _,to_compare in ipairs(resources) do
+--    redis.log(redis.LOG_NOTICE, 'Comparing ' .. resource .. ' and ' .. to_compare)
+    if to_compare ~= previous then
+        previous = to_compare
+        if resource > to_compare then
+--          redis.log(redis.LOG_NOTICE, 'Calculating similarity for ' .. resource .. ' and ' .. to_compare)
+            local intersect = table.getn(redis.call('SINTER', resource_key, resource_key_base .. ':' .. to_compare))
+            if intersect > 0 then
+                local union = table.getn(redis.call('SUNION', resource_key, resource_key_base .. ':' .. to_compare))
+                local similarity = round(intersect / union, 3)
+                if similarity > threshold then
+--                  redis.log(redis.LOG_NOTICE, resource .. ' and ' .. to_compare .. ' scored ' .. similarity)
+                    redis.call('ZADD', sim_key_base .. ':' .. resource, similarity, to_compare)
+                    redis.call('ZADD', sim_key_base .. ':' .. to_compare, similarity, resource)
+                end
+            end
+        end
     end
 end
 
-redis.log(redis.LOG_NOTICE, 'Finished running similarity for ' .. resource_key)
+redis.log(redis.LOG_NOTICE, 'Finished running complete similarity for ' .. resource_key)
 
 return true
