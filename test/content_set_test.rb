@@ -9,6 +9,13 @@ module Commendo
 
   class ContentSetTest < Minitest::Test
 
+    def test_gives_similarity_key_for_resource
+      redis = Redis.new(db: 15)
+      key_base = 'CommendoTests'
+      cs = ContentSet.new(redis, key_base)
+      assert_equal 'CommendoTests:similar:resource-1', cs.similarity_key('resource-1')
+    end
+
     def test_stores_sets_by_resource
       redis = Redis.new(db: 15)
       redis.flushdb
@@ -92,6 +99,22 @@ module Commendo
     end
 
     def test_calculate_deletes_old_values_first
+      skip
+    end
+
+    def test_deletes_resource_from_everywhere
+      skip
+    end
+
+    def test_accepts_incremental_updates
+      skip
+    end
+
+    def test_accepts_tag_collection
+      skip
+    end
+
+    def test_filters_by_tag_collection
       skip
     end
 

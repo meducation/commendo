@@ -46,8 +46,8 @@ task :load_traffic_from_tsv, :filename do |task, args|
   end
 
   puts 'Processing...'
-  cs.calculate_similarity(0.1999999999) { |key|
-    puts key
+  cs.calculate_similarity(0) { |key, index, total|
+    puts "#{key} - #{index}/#{total} = #{(index/total.to_f*100).round(2)}%"
   }
 end
 

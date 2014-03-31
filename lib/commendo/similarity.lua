@@ -20,7 +20,7 @@ for _,key in ipairs(key_matches) do
                 -- table.insert(similar, key)
                 -- table.insert(similar, similarity)
                 local resource = key:gsub('%' .. set_key_base .. ':', '')
-                redis.call('HSET', sim_key, resource, similarity)
+                redis.call('ZADD', sim_key, similarity, resource)
             end
         end
     end

@@ -20,11 +20,10 @@ module Commendo
 
     def calculate_similarity(threshold = 0)
       keys = redis.keys("#{set_key_base}:*")
-      keys.each do |outer_key|
+      keys.each_with_index do |outer_key,i|
         outer_res = outer_key.gsub(/^#{set_key_base}:/, '')
-        outer_similarity_key = "#{similar_key_base}:#{outer_res}"
-        calculate_similarity_in_redis(outer_key, outer_similarity_key, threshold)
-        yield(outer_key) if block_given?
+        calculate_similarity_in_redis(outer_key, similarity_key(outer_res), threshold)
+        yield(outer_key,i,keys.length) if block_given?
       end
 
     end
@@ -36,17 +35,16 @@ module Commendo
 
     def similar_to(resource)
       similar = []
-      similar_resources = redis.hgetall("#{similar_key_base}:#{resource}")
-      similar_resources.each do |resource, similarity|
-        similar << {resource: resource, similarity: similarity.to_f}
+      similar_resources = redis.zrevrange(similarity_key(resource), 0, -1, with_scores: true)
+      #TODO change to .map
+      similar_resources.each do |resource|
+        similar << {resource: resource[0], similarity: resource[1].to_f}
       end
-      similar.sort! do |x, y|
-        if y[:similarity] != x[:similarity]
-          y[:similarity] <=> x[:similarity]
-        else
-          y[:resource] <=> x[:resource]
-        end
-      end
+      similar
+    end
+
+    def similarity_key(resource)
+      "#{similar_key_base}:#{resource}"
     end
 
     private
