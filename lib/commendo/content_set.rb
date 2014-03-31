@@ -34,13 +34,12 @@ module Commendo
     end
 
     def similar_to(resource)
-      similar = []
       similar_resources = redis.zrevrange(similarity_key(resource), 0, -1, with_scores: true)
-      #TODO change to .map
-      similar_resources.each do |resource|
-        similar << {resource: resource[0], similarity: resource[1].to_f}
+
+      similar_resources.map do |resource|
+        {resource: resource[0], similarity: resource[1].to_f}
       end
-      similar
+
     end
 
     def similarity_key(resource)
