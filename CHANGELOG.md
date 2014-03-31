@@ -1,3 +1,6 @@
+# 0.0.5 / 2014-03-31
+* [FEATURE] Can now accept array of resources and return combined similarity scores
+
 # 0.0.4 / 2014-03-31
 * [FEATURE] Similarity score pushed down into redis using two different approaches depending on size of set
 
