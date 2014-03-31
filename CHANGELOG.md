@@ -1,3 +1,6 @@
+# 0.0.3 / 2014-03-31
+* [FEATURE] Filtering of recommendations based on tags
+
 # 0.0.2 / 2014-03-31
 * [FEATURE] Weighted groups. Incremental additions. Deletions.
 
