@@ -2,10 +2,10 @@ module Commendo
 
   class ContentSet
 
-    attr_accessor :redis, :key_base
+    attr_accessor :redis, :key_base, :tag_set
 
-    def initialize(redis, key_base)
-      @redis, @key_base = redis, key_base
+    def initialize(redis, key_base, tag_set = nil)
+      @redis, @key_base, @tag_set = redis, key_base, tag_set
     end
 
     def add_by_group(group, *resources)
@@ -68,7 +68,19 @@ module Commendo
       similar_resources.map do |resource|
         {resource: resource[0], similarity: resource[1].to_f}
       end
+    end
 
+    def filtered_similar_to(resource, options = {})
+      similar = similar_to(resource)
+      return similar if options[:include].nil? && options[:exclude].nil?
+      similar.delete_if { |s| !options[:exclude].nil? && tags_match(s[:resource], options[:exclude]) }
+      similar.delete_if { |s| !options[:include].nil? && !tags_match(s[:resource], options[:include]) }
+      similar
+    end
+
+    def tags_match(resource, tags)
+      resource_tags = tag_set.get(resource)
+      (resource_tags & tags).length > 0
     end
 
     def similarity_key(resource)

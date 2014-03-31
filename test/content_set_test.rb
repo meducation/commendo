@@ -66,12 +66,12 @@ module Commendo
       end
       cs.calculate_similarity
       expected = [
-        { resource:  '9', similarity: 0.5 },
-        { resource:  '6', similarity: 0.5 },
-        { resource: '12', similarity: 0.33333333333333 },
-        { resource:  '3', similarity: 0.25 },
-        { resource: '21', similarity: 0.16666666666667 },
-        { resource: '15', similarity: 0.16666666666667 }
+        {resource: '9', similarity: 0.5},
+        {resource: '6', similarity: 0.5},
+        {resource: '12', similarity: 0.33333333333333},
+        {resource: '3', similarity: 0.25},
+        {resource: '21', similarity: 0.16666666666667},
+        {resource: '15', similarity: 0.16666666666667}
       ]
       assert_equal expected, cs.similar_to(18)
     end
@@ -88,8 +88,8 @@ module Commendo
       end
       cs.calculate_similarity(0.4)
       expected = [
-        { resource:  '9', similarity: 0.5 },
-        { resource:  '6', similarity: 0.5 },
+        {resource: '9', similarity: 0.5},
+        {resource: '6', similarity: 0.5},
       ]
       assert_equal expected, cs.similar_to(18)
     end
@@ -144,16 +144,89 @@ module Commendo
       assert similar_to(cs, 10, 12)
     end
 
-    def test_accepts_tag_collection
-      skip
+    def test_filters_include_by_tag_collection
+      redis = Redis.new(db: 15)
+      redis.flushdb
+      ts = TagSet.new(redis, 'CommendoTests:tags')
+      cs = ContentSet.new(redis, 'CommendoTests', ts)
+      (3..23).each do |group|
+        (3..23).each do |res|
+          cs.add(res, group) if res % group == 0
+          ts.add(res, 'mod3') if res.modulo(3).zero?
+          ts.add(res, 'mod4') if res.modulo(4).zero?
+          ts.add(res, 'mod5') if res.modulo(5).zero?
+        end
+      end
+      cs.calculate_similarity
+
+      actual = cs.filtered_similar_to(10, include: ['mod5'])
+      assert_equal 3, actual.length
+      assert contains_resource('5', actual)
+      assert contains_resource('15', actual)
+      assert contains_resource('20', actual)
+
     end
 
-    def test_filters_by_tag_collection
-      skip
+    def test_filters_exclude_by_tag_collection
+      redis = Redis.new(db: 15)
+      redis.flushdb
+      ts = TagSet.new(redis, 'CommendoTests:tags')
+      cs = ContentSet.new(redis, 'CommendoTests', ts)
+      (3..23).each do |group|
+        (3..23).each do |res|
+          cs.add(res, group) if res % group == 0
+          ts.add(res, 'mod3') if res.modulo(3).zero?
+          ts.add(res, 'mod4') if res.modulo(4).zero?
+          ts.add(res, 'mod5') if res.modulo(5).zero?
+        end
+      end
+      cs.calculate_similarity
+
+      actual = cs.filtered_similar_to(10, exclude: ['mod3'])
+      assert_equal 2, actual.length
+      assert contains_resource('5', actual)
+      assert contains_resource('20', actual)
+      refute contains_resource('15', actual)
+
+    end
+
+    def test_filters_includes_and_exclude_by_tag_collection
+      redis = Redis.new(db: 15)
+      redis.flushdb
+      ts = TagSet.new(redis, 'CommendoTests:tags')
+      cs = ContentSet.new(redis, 'CommendoTests', ts)
+      (3..23).each do |group|
+        (3..23).each do |res|
+          cs.add(res, group) if res % group == 0
+          ts.add(res, 'mod3') if res.modulo(3).zero?
+          ts.add(res, 'mod4') if res.modulo(4).zero?
+          ts.add(res, 'mod5') if res.modulo(5).zero?
+        end
+      end
+      cs.calculate_similarity
+
+      actual = cs.filtered_similar_to(12, include: ['mod4'], exclude: ['mod3', 'mod5'])
+      assert_equal 3, actual.length
+
+      refute contains_resource('6', actual)
+      refute contains_resource('18', actual)
+      assert contains_resource('4', actual)
+      refute contains_resource('3', actual)
+      refute contains_resource('9', actual)
+      assert contains_resource('8', actual)
+      refute contains_resource('21', actual)
+      assert contains_resource('16', actual)
+      refute contains_resource('15', actual)
+      refute contains_resource('20', actual)
+
     end
 
     def similar_to(cs, resource, similar)
-      cs.similar_to(resource).select { |sim| sim[:resource] == "#{similar}" }.length > 0
+      contains_resource(similar, cs.similar_to(resource))
+    end
+
+    def contains_resource(resource, similarities)
+      similarities.select { |sim| sim[:resource] == "#{resource}" }.length > 0
     end
 
   end
