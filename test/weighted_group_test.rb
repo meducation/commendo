@@ -34,9 +34,9 @@ module Commendo
       weighted_group = WeightedGroup.new(
         @redis,
         'CommendoTests:WeightedGroup',
-        { cs: @cs1, weight: 1.0 },
-        { cs: @cs2, weight: 10.0 },
-        { cs: @cs3, weight: 100.0 }
+        {cs: @cs1, weight: 1.0},
+        {cs: @cs2, weight: 10.0},
+        {cs: @cs3, weight: 100.0}
       )
       expected = [
         {resource: '6', similarity: 55.5},
@@ -53,9 +53,9 @@ module Commendo
       weighted_group = WeightedGroup.new(
         @redis,
         'CommendoTests:WeightedGroup',
-        { cs: @cs1, weight: 1.0 },
-        { cs: @cs2, weight: 10.0 },
-        { cs: @cs3, weight: 100.0 }
+        {cs: @cs1, weight: 1.0},
+        {cs: @cs2, weight: 10.0},
+        {cs: @cs3, weight: 100.0}
       )
       expected = [
         #{resource: '6', similarity: 55.5},
@@ -65,6 +65,7 @@ module Commendo
         #{resource: '21', similarity: 1.67},
         {resource: '15', similarity: 1.67}
       ]
+      weighted_group.tag_set = @tag_set
       assert_equal expected, weighted_group.filtered_similar_to(18, include: ['mod5'])
     end
 
@@ -79,7 +80,6 @@ module Commendo
     def test_precalculates
       skip
     end
-
 
 
   end

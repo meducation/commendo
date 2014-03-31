@@ -2,14 +2,10 @@ module Commendo
 
   class WeightedGroup
 
-    attr_accessor :content_sets, :redis, :key_base
+    attr_accessor :content_sets, :redis, :key_base, :tag_set
 
     def initialize(redis, key_base, *content_sets)
       @content_sets, @redis, @key_base = content_sets, redis, key_base
-      tag_sets = content_sets.map { |cs| cs[:cs].tag_set }
-      tag_sets.compact!
-      tag_sets.uniq!
-      @tag_set = tag_sets.first
     end
 
     def similar_to(resource)
