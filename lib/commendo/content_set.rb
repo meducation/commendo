@@ -43,6 +43,7 @@ module Commendo
       similar.each do |other_resource|
         redis.zrem(similarity_key(other_resource[:resource]), "#{resource}")
       end
+      #TODO delete from groups?
       redis.del(similarity_key(resource))
       redis.del(resource_key(resource))
     end
@@ -50,17 +51,36 @@ module Commendo
     def calculate_similarity(threshold = 0)
       #TODO make this use scan for scaling
       keys = redis.keys("#{resource_key_base}:*")
-      keys.each_with_index do |outer_key, i|
-        outer_res = outer_key.gsub(/^#{resource_key_base}:/, '')
-        calculate_similarity_in_redis(outer_key, similarity_key(outer_res), threshold)
-        yield(outer_key, i, keys.length) if block_given?
+      keys.each_with_index do |key, i|
+        resource = key.gsub(/^#{resource_key_base}:/, '')
+        groups = redis.smembers(resource_key(resource))
+        group_keys = groups.map { |group| group_key(group) }
+        resources = redis.sunion(*group_keys)
+        resources.each do |to_compare|
+          if resource < to_compare
+            intersect = redis.sinter(key, resource_key(to_compare))
+            if (intersect.length > 0)
+              union = redis.sunion(key, resource_key(to_compare))
+              jaccard = intersect.length / union.length.to_f
+              redis.zadd(similarity_key(resource), jaccard, to_compare) unless jaccard < threshold
+              redis.zadd(similarity_key(to_compare), jaccard, resource) unless jaccard < threshold
+            end
+          end
+        end
+        yield(key, i, keys.length) if block_given?
       end
+
+      #keys.each_with_index do |outer_key, i|
+      #  outer_res = outer_key.gsub(/^#{resource_key_base}:/, '')
+      #  calculate_similarity_in_redis(outer_key, similarity_key(outer_res), threshold)
+      #  yield(outer_key, i, keys.length) if block_given?
+      #end
     end
 
-    def calculate_similarity_in_redis(set_key, similiarity_key, threshold)
-      #TODO maybe consider using ary.combination to get finer grained operation in lua
-      redis.eval(similarity_lua, [set_key, similiarity_key], [resource_key_base, threshold])
-    end
+    #def calculate_similarity_in_redis(set_key, similiarity_key, threshold)
+    #  #TODO maybe consider using ary.combination to get finer grained operation in lua
+    #  redis.eval(similarity_lua, [set_key, similiarity_key], [resource_key_base, threshold])
+    #end
 
     def similar_to(resource)
       similar_resources = redis.zrevrange(similarity_key(resource), 0, -1, with_scores: true)

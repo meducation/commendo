@@ -26,13 +26,12 @@ module Commendo
       weighted_group = WeightedGroup.new(redis, 'CommendoTests:WeightedGroup', { cs: cs1, weight: 1.0 },  { cs: cs2, weight: 10.0 },  { cs: cs3, weight: 100.0 } )
       expected = [
         {resource: '6', similarity: 55.5},
-        {resource: '12', similarity: 36.99999999999963},
+        {resource: '12', similarity: 37.0},
         {resource: '9', similarity: 5.0},
         {resource: '3', similarity: 2.5},
-        {resource: '21', similarity: 1.6666666666666998},
-        {resource: '15', similarity: 1.6666666666666998}
+        {resource: '21', similarity: 1.6666666666666665},
+        {resource: '15', similarity: 1.6666666666666665}
       ]
-
       assert_equal expected, weighted_group.similar_to(18)
     end
 

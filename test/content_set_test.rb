@@ -68,10 +68,10 @@ module Commendo
       expected = [
         {resource: '9', similarity: 0.5},
         {resource: '6', similarity: 0.5},
-        {resource: '12', similarity: 0.33333333333333},
+        {resource: '12', similarity: 0.3333333333333333},
         {resource: '3', similarity: 0.25},
-        {resource: '21', similarity: 0.16666666666667},
-        {resource: '15', similarity: 0.16666666666667}
+        {resource: '21', similarity: 0.16666666666666666},
+        {resource: '15', similarity: 0.16666666666666666}
       ]
       assert_equal expected, cs.similar_to(18)
     end
