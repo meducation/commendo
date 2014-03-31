@@ -9,13 +9,22 @@ module Commendo
     end
 
     def add_by_group(group, *resources)
-      resources.each do |res|
-        redis.sadd("#{set_key_base}:#{res}", group)
+      resources.each do |resource|
+        redis.sadd(resource_key(resource), group)
       end
     end
 
     def add(resource, *groups)
-      redis.sadd("#{set_key_base}:#{resource}", groups)
+      redis.sadd(resource_key(resource), groups)
+    end
+
+    def delete(resource)
+      similar = similar_to(resource)
+      similar.each do |other_resource|
+        redis.zrem(similarity_key(other_resource[:resource]), "#{resource}")
+      end
+      redis.del(similarity_key(resource))
+      redis.del(resource_key(resource))
     end
 
     def calculate_similarity(threshold = 0)
@@ -25,7 +34,6 @@ module Commendo
         calculate_similarity_in_redis(outer_key, similarity_key(outer_res), threshold)
         yield(outer_key,i,keys.length) if block_given?
       end
-
     end
 
     def calculate_similarity_in_redis(set_key, similiarity_key, threshold)
@@ -63,6 +71,10 @@ module Commendo
 
     def similar_key_base
       "#{key_base}:similar"
+    end
+
+    def resource_key(resource)
+      "#{set_key_base}:#{resource}"
     end
 
   end

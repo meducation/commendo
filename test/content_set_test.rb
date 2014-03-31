@@ -103,7 +103,26 @@ module Commendo
     end
 
     def test_deletes_resource_from_everywhere
-      skip
+      redis = Redis.new(db: 15)
+      redis.flushdb
+      key_base = 'CommendoTests'
+      cs = ContentSet.new(redis, key_base)
+      (3..23).each do |group|
+        (3..23).each do |res|
+          cs.add_by_group(group, res) if res % group == 0
+        end
+      end
+      cs.calculate_similarity
+      assert_equal 1, cs.similar_to(18).select { |sim| sim[:resource] == '12' }.length
+
+      cs.delete(12)
+      assert_equal [], cs.similar_to(12)
+      assert_equal 0, cs.similar_to(18).select { |sim| sim[:resource] == '12' }.length
+
+      cs.calculate_similarity
+      assert_equal [], cs.similar_to(12)
+      assert_equal 0, cs.similar_to(18).select { |sim| sim[:resource] == '12' }.length
+
     end
 
     def test_accepts_incremental_updates
