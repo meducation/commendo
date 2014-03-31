@@ -1,3 +1,6 @@
+# 0.0.4 / 2014-03-31
+* [FEATURE] Similarity score pushed down into redis using two different approaches depending on size of set
+
 # 0.0.3 / 2014-03-31
 * [FEATURE] Filtering of recommendations based on tags
 
