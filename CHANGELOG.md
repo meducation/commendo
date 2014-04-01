@@ -1,3 +1,6 @@
+# 0.0.6 / 2014-04-01
+* [FEATURE] Weighted groups now accept array of resources and return combined similarity scores
+
 # 0.0.5 / 2014-03-31
 * [FEATURE] Can now accept array of resources and return combined similarity scores
 
