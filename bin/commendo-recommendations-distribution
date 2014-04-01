@@ -1,0 +1,24 @@
+#!/usr/bin/env ruby
+
+content_set_base_redis_key = ARGV[0]
+
+require 'redis'
+require 'commendo'
+
+redis = Redis.new(db: 2)
+#cs = Commendo::ContentSet.new(redis, content_set_base_redis_key)
+
+distribution = {}
+cursor = 0
+begin
+  cursor, keys = redis.scan(cursor.to_i, match: content_set_base_redis_key, count: 1000)
+  keys.each do |key|
+    count = redis.zcard(key)
+    distribution[count] ||= 0
+    distribution[count] += 1
+  end
+end while cursor.to_i > 0
+
+distribution.each do |score, count|
+  puts "#{score}\t#{count}"
+end

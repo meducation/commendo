@@ -1,0 +1,27 @@
+#!/usr/bin/env ruby
+
+content_set_base_redis_key = ARGV[0]
+
+require 'redis'
+require 'commendo'
+
+redis = Redis.new(db: 2)
+#cs = Commendo::ContentSet.new(redis, content_set_base_redis_key)
+
+distribution = {}
+cursor = 0
+begin
+  cursor, keys = redis.scan(cursor.to_i, match: content_set_base_redis_key, count: 1000)
+  keys.each do |key|
+    similar = redis.zrange(key, 0, -1, with_scores: true)
+    similar.each do |recommendation|
+      resource, score = recommendation
+      distribution[score.round(1)] ||= 0
+      distribution[score.round(1)] += 1
+    end
+  end
+end while cursor.to_i > 0
+
+distribution.each do |score, count|
+  puts "#{score}\t#{count}"
+end
