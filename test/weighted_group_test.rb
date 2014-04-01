@@ -85,25 +85,65 @@ module Commendo
       weighted_group = WeightedGroup.new(
         @redis,
         'CommendoTests:WeightedGroup',
-        {cs: @cs1, weight: 1.0},
+        {cs: @cs1, weight: 100.0},
         {cs: @cs2, weight: 10.0},
-        {cs: @cs3, weight: 100.0}
+        {cs: @cs3, weight: 1.0}
       )
       expected = [
-        {resource: '16', similarity: 0.667},
-        {resource: '4', similarity: 0.5},
-        {resource: '12', similarity: 0.2}
+        {resource: '16', similarity: 66.7},
+        {resource: '4', similarity: 50.0},
+        {resource: '12', similarity: 20.0}
       ]
       weighted_group.tag_set = @tag_set
       assert_equal expected, weighted_group.filtered_similar_to(8, include: ['mod4'], exclude: ['mod5'])
     end
 
     def test_similar_to_mutliple_items
-      skip
+      weighted_group = WeightedGroup.new(
+        @redis,
+        'CommendoTests:WeightedGroup',
+        {cs: @cs1, weight: 100.0},
+        {cs: @cs2, weight: 10.0},
+        {cs: @cs3, weight: 1.0}
+      )
+      expected = [
+        {resource: '12', similarity: 83.0},
+        {resource: '18', similarity: 58.0},
+        {resource: '8', similarity: 50.0},
+        {resource: '16', similarity: 33.3},
+        {resource: '20', similarity: 25.0},
+        {resource: '9', similarity: 8.33},
+        {resource: '21', similarity: 5.83},
+        {resource: '15', similarity: 5.83},
+        {resource: '6', similarity: 5.0},
+        {resource: '3', similarity: 5.0}
+      ]
+      weighted_group.tag_set = @tag_set
+      assert_equal expected, weighted_group.similar_to([3,4,5,6,7])
     end
 
     def test_filtered_similar_to_mutliple_items
-      skip
+      weighted_group = WeightedGroup.new(
+        @redis,
+        'CommendoTests:WeightedGroup',
+        {cs: @cs1, weight: 100.0},
+        {cs: @cs2, weight: 10.0},
+        {cs: @cs3, weight: 1.0}
+      )
+      expected = [
+        {resource: '12', similarity: 83.0},
+        #{resource: '18', similarity: 58.0},
+        {resource: '8', similarity: 50.0},
+        {resource: '16', similarity: 33.3},
+        #{resource: '20', similarity: 25.0},
+        #{resource: '9', similarity: 8.33},
+        #{resource: '21', similarity: 5.83},
+        #{resource: '15', similarity: 5.83},
+        #{resource: '6', similarity: 5.0},
+        #{resource: '3', similarity: 5.0}
+      ]
+      weighted_group.tag_set = @tag_set
+      assert_equal expected, weighted_group.filtered_similar_to([3,4,5,6,7], include: ['mod4'], exclude: ['mod5'])
     end
 
     def test_precalculates

@@ -9,11 +9,14 @@ module Commendo
     end
 
     def similar_to(resource)
-      keys = content_sets.map do |cs|
-        cs[:cs].similarity_key(resource)
-      end
-      weights = content_sets.map do |cs|
-        cs[:weight]
+      resources = resource.kind_of?(Array) ? resource : [resource]
+      keys = []
+      weights = []
+      content_sets.each do |cs|
+        resources.each do |resource|
+          keys << cs[:cs].similarity_key(resource)
+          weights << cs[:weight]
+        end
       end
       tmp_key = "#{key_base}:tmp:#{SecureRandom.uuid}"
       redis.zunionstore(tmp_key, keys, weights: weights)
