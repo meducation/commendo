@@ -1,3 +1,6 @@
+# 0.0.7 / 2014-04-01
+* [BUGFIX] Cope with sets of empty tags being set in TagSet
+
 # 0.0.6 / 2014-04-01
 * [FEATURE] Weighted groups now accept array of resources and return combined similarity scores
 
