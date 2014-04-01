@@ -13,7 +13,7 @@ module Commendo
     end
 
     def add(resource, *tags)
-      redis.sadd(resource_key(resource), tags)
+      redis.sadd(resource_key(resource), tags) unless tags.empty?
     end
 
     def set(resource, *tags)
