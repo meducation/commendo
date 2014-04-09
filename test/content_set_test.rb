@@ -34,6 +34,24 @@ module Commendo
       assert_equal expected, cs.similar_to('resource-1')
     end
 
+    def test_recommends_when_added_with_scores
+      redis = Redis.new(db: 15)
+      redis.flushdb
+      key_base = 'CommendoTests'
+      cs = ContentSet.new(redis, key_base)
+      cs.add('resource-1', [2, 'group-1'], [2, 'group-2'])
+      cs.add('resource-2', [7, 'group-1'])
+      cs.add('resource-3', [2, 'group-1'], [2, 'group-2'])
+      cs.add('resource-4', [3, 'group-2'])
+      cs.calculate_similarity
+      expected = [
+        {resource: 'resource-3', similarity: 1.0},
+        {resource: 'resource-2', similarity: 0.818},
+        {resource: 'resource-4', similarity: 0.714}
+      ]
+      assert_equal expected, cs.similar_to('resource-1')
+    end
+
     def test_recommends_when_added_by_group
       redis = Redis.new(db: 15)
       redis.flushdb
@@ -46,6 +64,22 @@ module Commendo
         {resource: 'resource-3', similarity: 1.0},
         {resource: 'resource-4', similarity: 0.667},
         {resource: 'resource-2', similarity: 0.667}
+      ]
+      assert_equal expected, cs.similar_to('resource-1')
+    end
+
+    def test_recommends_when_added_by_group_with_scores
+      redis = Redis.new(db: 15)
+      redis.flushdb
+      key_base = 'CommendoTests'
+      cs = ContentSet.new(redis, key_base)
+      cs.add_by_group('group-1', [2, 'resource-1'], [3, 'resource-2'], [7, 'resource-3'])
+      cs.add_by_group('group-2', [2, 'resource-1'], [3, 'resource-3'], [5, 'resource-4'])
+      cs.calculate_similarity
+      expected = [
+        {resource: 'resource-3', similarity: 1.0},
+        {resource: 'resource-4', similarity: 0.778},
+        {resource: 'resource-2', similarity: 0.714}
       ]
       assert_equal expected, cs.similar_to('resource-1')
     end
