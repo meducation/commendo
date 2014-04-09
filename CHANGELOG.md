@@ -1,5 +1,5 @@
 # 0.0.8 / 2014-04-09
-* [FEATURE] Allow degree of set membership to be included when adding data
+* [FEATURE] Allow degree of set membership to be included when adding data and incrementally increase scores when adding new data
 
 # 0.0.7 / 2014-04-01
 * [BUGFIX] Cope with sets of empty tags being set in TagSet
