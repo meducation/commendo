@@ -9,33 +9,24 @@ module Commendo
     end
 
     def add_by_group(group, *resources)
-      redis.sadd(group_key(group), resources)
+      resources = resources.map { |r| r.kind_of?(Array) ? r : [1,r] }
+      redis.zadd(group_key(group), resources)
       resources.each do |resource|
-        redis.sadd(resource_key(resource), group)
+        redis.zadd(resource_key(resource[1]), resource[0], group)
       end
     end
 
     def add(resource, *groups)
-      redis.sadd(resource_key(resource), groups)
+      groups = groups.map { |g| g.kind_of?(Array) ? g : [1,g] }
+      redis.zadd(resource_key(resource), groups)
       groups.each do |group|
-        redis.sadd(group_key(group), resource)
+        redis.zadd(group_key(group[1]), group[0], resource)
       end
     end
 
     def add_and_calculate(resource, *groups)
       add(resource, *groups)
-      groups = redis.smembers(resource_key(resource))
-      group_keys = groups.map { |group| group_key(group) }
-      resources = redis.sunion(*group_keys)
-      resources.combination(2) do |l, r|
-        intersect = redis.sinter(resource_key(l), resource_key(r))
-        if (intersect.length > 0)
-          union = redis.sunion(resource_key(l), resource_key(r))
-          jaccard = intersect.length / union.length.to_f
-          redis.zadd(similarity_key(l), jaccard, r)
-          redis.zadd(similarity_key(r), jaccard, l)
-        end
-      end
+      calculate_similarity_for_resource(resource, 0)
     end
 
     def delete(resource)
@@ -48,22 +39,39 @@ module Commendo
       redis.del(resource_key(resource))
     end
 
+    SET_TOO_LARGE_FOR_LUA = 999
     def calculate_similarity(threshold = 0)
       #TODO make this use scan for scaling
       keys = redis.keys("#{resource_key_base}:*")
       keys.each_with_index do |key, i|
         yield(key, i, keys.length) if block_given?
-        completed = redis.eval(similarity_lua, keys: [key], argv: [resource_key_base, similar_key_base, group_key_base, threshold])
-        if completed == 999
-          resource = key.gsub(/^#{resource_key_base}:/, '')
-          groups = redis.smembers(resource_key(resource))
-          group_keys = groups.map { |group| group_key(group) }
-          resources = redis.sunion(*group_keys)
-          resources.each do |to_compare|
-            next if resource == to_compare
-            redis.eval(pair_comparison_lua, keys: [key, resource_key(to_compare), similarity_key(resource), similarity_key(to_compare)], argv: [resource, to_compare, threshold])
-          end
+        completed = redis.eval(similarity_lua, keys: [key], argv: [tmp_key_base, resource_key_base, similar_key_base, group_key_base, threshold])
+        if completed == SET_TOO_LARGE_FOR_LUA
+          calculate_similarity_for_key(key, threshold)
         end
+      end
+    end
+
+    def calculate_similarity_for_key(key, threshold)
+      resource = key.gsub(/^#{resource_key_base}:/, '')
+      calculate_similarity_for_key_resource(key, resource, threshold)
+    end
+
+    def calculate_similarity_for_resource(resource, threshold)
+      key = resource_key(resource)
+      calculate_similarity_for_key_resource(key, resource, threshold)
+    end
+
+    def calculate_similarity_for_key_resource(key, resource, threshold)
+      groups = redis.zrange(resource_key(resource), 0, -1)
+      group_keys = groups.map { |group| group_key(group) }
+      tmp_key = "#{tmp_key_base}:#{SecureRandom.uuid}"
+      redis.zunionstore(tmp_key, group_keys)
+      resources = redis.zrange(tmp_key, 0, -1)
+      redis.del(tmp_key)
+      resources.each do |to_compare|
+        next if resource == to_compare
+        redis.eval(pair_comparison_lua, keys: [key, resource_key(to_compare), similarity_key(resource), similarity_key(to_compare)], argv: [tmp_key_base, resource, to_compare, threshold])
       end
     end
 
@@ -114,6 +122,10 @@ module Commendo
     def load_pair_comparison_lua
       file = File.open(File.expand_path('../pair_comparison.lua', __FILE__), "r")
       file.read
+    end
+
+    def tmp_key_base
+      "#{key_base}:tmp"
     end
 
     def similar_key_base

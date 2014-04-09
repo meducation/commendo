@@ -40,12 +40,12 @@ module Commendo
         {cs: @cs3, weight: 100.0}
       )
       expected = [
-        {resource: '6', similarity: 55.5},
-        {resource: '12', similarity: 36.963},
-        {resource: '9', similarity: 5.0},
-        {resource: '3', similarity: 2.5},
-        {resource: '21', similarity: 1.67},
-        {resource: '15', similarity: 1.67}
+        {resource: '6', similarity: 74.037},
+        {resource: '12', similarity: 55.5},
+        {resource: '9', similarity: 6.67},
+        {resource: '3', similarity: 4.0},
+        {resource: '21', similarity: 2.86},
+        {resource: '15', similarity: 2.86}
       ]
       assert_equal expected, weighted_group.similar_to(18)
     end
@@ -58,7 +58,7 @@ module Commendo
         {cs: @cs2, weight: 10.0},
         {cs: @cs3, weight: 100.0}
       )
-      expected = [{resource: '15', similarity: 1.67}]
+      expected = [{resource: '15', similarity: 2.86}]
       weighted_group.tag_set = @tag_set
       assert_equal expected, weighted_group.filtered_similar_to(18, include: ['mod5'])
     end
@@ -72,10 +72,10 @@ module Commendo
         {cs: @cs3, weight: 100.0}
       )
       expected = [
-        {resource: '6', similarity: 55.5},
-        {resource: '12', similarity: 36.963},
-        {resource: '9', similarity: 5.0},
-        {resource: '3', similarity: 2.5}
+        {resource: '6', similarity: 74.037},
+        {resource: '12', similarity: 55.5},
+        {resource: '9', similarity: 6.67},
+        {resource: '3', similarity: 4.0}
       ]
       weighted_group.tag_set = @tag_set
       assert_equal expected, weighted_group.filtered_similar_to(18, exclude: ['mod5', 'mod7'])
@@ -90,9 +90,9 @@ module Commendo
         {cs: @cs3, weight: 1.0}
       )
       expected = [
-        {resource: '16', similarity: 66.7},
-        {resource: '4', similarity: 50.0},
-        {resource: '12', similarity: 20.0}
+        {resource: '16', similarity: 80.0},
+        {resource: '4', similarity: 66.7},
+        {resource: '12', similarity: 33.3}
       ]
       weighted_group.tag_set = @tag_set
       assert_equal expected, weighted_group.filtered_similar_to(8, include: ['mod4'], exclude: ['mod5'])
@@ -107,16 +107,16 @@ module Commendo
         {cs: @cs3, weight: 1.0}
       )
       expected = [
-        {resource: '12', similarity: 83.0},
-        {resource: '18', similarity: 58.0},
-        {resource: '8', similarity: 50.0},
-        {resource: '16', similarity: 33.3},
-        {resource: '20', similarity: 25.0},
-        {resource: '9', similarity: 8.33},
-        {resource: '21', similarity: 5.83},
-        {resource: '15', similarity: 5.83},
-        {resource: '6', similarity: 5.0},
-        {resource: '3', similarity: 5.0}
+        {resource: '12', similarity: 118.037},
+        {resource: '18', similarity: 78.037},
+        {resource: '8', similarity: 66.7},
+        {resource: '16', similarity: 50.0},
+        {resource: '20', similarity: 40.0},
+        {resource: '9', similarity: 11.67},
+        {resource: '21', similarity: 9.0},
+        {resource: '15', similarity: 9.0},
+        {resource: '6', similarity: 6.67},
+        {resource: '3', similarity: 6.67}
       ]
       weighted_group.tag_set = @tag_set
       assert_equal expected, weighted_group.similar_to([3,4,5,6,7])
@@ -131,16 +131,9 @@ module Commendo
         {cs: @cs3, weight: 1.0}
       )
       expected = [
-        {resource: '12', similarity: 83.0},
-        #{resource: '18', similarity: 58.0},
-        {resource: '8', similarity: 50.0},
-        {resource: '16', similarity: 33.3},
-        #{resource: '20', similarity: 25.0},
-        #{resource: '9', similarity: 8.33},
-        #{resource: '21', similarity: 5.83},
-        #{resource: '15', similarity: 5.83},
-        #{resource: '6', similarity: 5.0},
-        #{resource: '3', similarity: 5.0}
+        {resource: '12', similarity: 118.037},
+        {resource: '8', similarity: 66.7},
+        {resource: '16', similarity: 50.0},
       ]
       weighted_group.tag_set = @tag_set
       assert_equal expected, weighted_group.filtered_similar_to([3,4,5,6,7], include: ['mod4'], exclude: ['mod5'])
