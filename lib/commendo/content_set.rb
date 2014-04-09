@@ -9,19 +9,28 @@ module Commendo
     end
 
     def add_by_group(group, *resources)
-      resources = resources.map { |r| r.kind_of?(Array) ? r : [1,r] }
-      redis.zadd(group_key(group), resources)
       resources.each do |resource|
-        redis.zadd(resource_key(resource[1]), resource[0], group)
+        if resource.kind_of?(Array)
+          add_single(resource[0], group, resource[1])
+        else
+          add_single(resource, group, 1)
+        end
       end
     end
 
     def add(resource, *groups)
-      groups = groups.map { |g| g.kind_of?(Array) ? g : [1,g] }
-      redis.zadd(resource_key(resource), groups)
       groups.each do |group|
-        redis.zadd(group_key(group[1]), group[0], resource)
+        if group.kind_of?(Array)
+          add_single(resource, group[0], group[1])
+        else
+          add_single(resource, group, 1)
+        end
       end
+    end
+
+    def add_single(resource, group, score)
+      redis.zincrby(group_key(group), score, resource)
+      redis.zincrby(resource_key(resource), score, group)
     end
 
     def add_and_calculate(resource, *groups)
@@ -40,6 +49,7 @@ module Commendo
     end
 
     SET_TOO_LARGE_FOR_LUA = 999
+
     def calculate_similarity(threshold = 0)
       #TODO make this use scan for scaling
       keys = redis.keys("#{resource_key_base}:*")

@@ -39,10 +39,10 @@ module Commendo
       redis.flushdb
       key_base = 'CommendoTests'
       cs = ContentSet.new(redis, key_base)
-      cs.add('resource-1', [2, 'group-1'], [2, 'group-2'])
-      cs.add('resource-2', [7, 'group-1'])
-      cs.add('resource-3', [2, 'group-1'], [2, 'group-2'])
-      cs.add('resource-4', [3, 'group-2'])
+      cs.add('resource-1', ['group-1', 2], ['group-2', 2])
+      cs.add('resource-2', ['group-1', 7])
+      cs.add('resource-3', ['group-1', 2], ['group-2', 2])
+      cs.add('resource-4', ['group-2', 3])
       cs.calculate_similarity
       expected = [
         {resource: 'resource-3', similarity: 1.0},
@@ -50,6 +50,24 @@ module Commendo
         {resource: 'resource-4', similarity: 0.714}
       ]
       assert_equal expected, cs.similar_to('resource-1')
+    end
+
+    def test_recommends_when_extra_scores_added
+      test_recommends_when_added_with_scores
+      redis = Redis.new(db: 15)
+      key_base = 'CommendoTests'
+      cs = ContentSet.new(redis, key_base)
+      cs.add('resource-3', ['group-1', 1], ['group-3', 2])
+      cs.add('resource-4', ['group-2', 1])
+      cs.add_by_group('group-1', ['newource-9', 100], 'resource-2', 'resource-3')
+      cs.add_by_group('group-2', 'resource-1', 'resource-3', 'resource-4')
+      cs.calculate_similarity
+      expected = [
+        {resource: 'newource-9', similarity: 1.0},
+        {resource: 'resource-1', similarity: 0.769},
+        {resource: 'resource-3', similarity: 0.706}
+      ]
+      assert_equal expected, cs.similar_to('resource-2')
     end
 
     def test_recommends_when_added_by_group
@@ -73,8 +91,8 @@ module Commendo
       redis.flushdb
       key_base = 'CommendoTests'
       cs = ContentSet.new(redis, key_base)
-      cs.add_by_group('group-1', [2, 'resource-1'], [3, 'resource-2'], [7, 'resource-3'])
-      cs.add_by_group('group-2', [2, 'resource-1'], [3, 'resource-3'], [5, 'resource-4'])
+      cs.add_by_group('group-1', ['resource-1', 2], ['resource-2', 3], ['resource-3', 7])
+      cs.add_by_group('group-2', ['resource-1', 2], ['resource-3', 3], ['resource-4', 5])
       cs.calculate_similarity
       expected = [
         {resource: 'resource-3', similarity: 1.0},

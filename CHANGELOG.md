@@ -1,3 +1,6 @@
+# 0.0.8 / 2014-04-09
+* [FEATURE] Allow degree of set membership to be included when adding data
+
 # 0.0.7 / 2014-04-01
 * [BUGFIX] Cope with sets of empty tags being set in TagSet
 
