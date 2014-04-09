@@ -19,9 +19,9 @@ module Commendo
       @cs3 = ContentSet.new(@redis, 'CommendoTests:ContentSet3', @tag_set)
       (3..23).each do |group|
         (3..23).each do |res|
-          @cs1.add_by_group(group, res) if (res % group == 0) && (res % 2 == 0)
-          @cs2.add_by_group(group, res) if (res % group == 0) && (res % 3 == 0)
-          @cs3.add_by_group(group, res) if (res % group == 0) && (res % 6 == 0)
+          @cs1.add_by_group(group, res) if res.modulo(group).zero? && res.modulo(2).zero?
+          @cs2.add_by_group(group, res) if res.modulo(group).zero? && res.modulo(3).zero?
+          @cs3.add_by_group(group, res) if res.modulo(group).zero? && res.modulo(6).zero?
           @tag_set.add(res, 'mod3') if res.modulo(3).zero?
           @tag_set.add(res, 'mod4') if res.modulo(4).zero?
           @tag_set.add(res, 'mod5') if res.modulo(5).zero?
