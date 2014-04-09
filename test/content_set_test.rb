@@ -16,7 +16,7 @@ module Commendo
       assert_equal 'CommendoTests:similar:resource-1', cs.similarity_key('resource-1')
     end
 
-    def test_stores_sets_by_resource
+    def test_recommends_when_added
       redis = Redis.new(db: 15)
       redis.flushdb
       key_base = 'CommendoTests'
@@ -25,33 +25,37 @@ module Commendo
       cs.add('resource-2', 'group-1')
       cs.add('resource-3', 'group-1', 'group-2')
       cs.add('resource-4', 'group-2')
-      assert redis.sismember("#{key_base}:resources:resource-1", 'group-1')
-      assert redis.sismember("#{key_base}:resources:resource-2", 'group-1')
-      assert redis.sismember("#{key_base}:resources:resource-3", 'group-1')
-      refute redis.sismember("#{key_base}:resources:resource-4", 'group-1')
-
-      assert redis.sismember("#{key_base}:resources:resource-1", 'group-2')
-      refute redis.sismember("#{key_base}:resources:resource-2", 'group-2')
-      assert redis.sismember("#{key_base}:resources:resource-3", 'group-2')
-      assert redis.sismember("#{key_base}:resources:resource-4", 'group-2')
+      cs.calculate_similarity
+      expected = [
+        {resource: 'resource-3', similarity: 1.0},
+        {resource: 'resource-4', similarity: 0.5},
+        {resource: 'resource-2', similarity: 0.5}
+      ]
+      assert_equal expected, cs.similar_to('resource-1')
     end
 
-    def test_stores_sets_by_group
+    def test_recommends_when_added_by_group
       redis = Redis.new(db: 15)
       redis.flushdb
       key_base = 'CommendoTests'
       cs = ContentSet.new(redis, key_base)
       cs.add_by_group('group-1', 'resource-1', 'resource-2', 'resource-3')
       cs.add_by_group('group-2', 'resource-1', 'resource-3', 'resource-4')
-      assert redis.sismember("#{key_base}:resources:resource-1", 'group-1')
-      assert redis.sismember("#{key_base}:resources:resource-2", 'group-1')
-      assert redis.sismember("#{key_base}:resources:resource-3", 'group-1')
-      refute redis.sismember("#{key_base}:resources:resource-4", 'group-1')
+      cs.calculate_similarity
+      expected = [
+        {resource: 'resource-3', similarity: 1.0},
+        {resource: 'resource-4', similarity: 0.5},
+        {resource: 'resource-2', similarity: 0.5}
+      ]
+      assert_equal expected, cs.similar_to('resource-1')
+    end
 
-      assert redis.sismember("#{key_base}:resources:resource-1", 'group-2')
-      refute redis.sismember("#{key_base}:resources:resource-2", 'group-2')
-      assert redis.sismember("#{key_base}:resources:resource-3", 'group-2')
-      assert redis.sismember("#{key_base}:resources:resource-4", 'group-2')
+    def test_recommendations_are_isolated_by_key_base
+      skip
+    end
+
+    def test_recommendations_are_isolated_by_redis_db
+      skip
     end
 
     def test_calculates_similarity_scores

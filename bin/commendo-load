@@ -1,0 +1,21 @@
+#!/usr/bin/env ruby
+
+redis_db = ARGV[0].to_i
+content_set_base_redis_key = ARGV[1]
+filename = ARGV[2]
+
+require 'redis'
+require 'commendo'
+
+redis = Redis.new(db: 2)
+cs = Commendo::ContentSet.new(redis, content_set_base_redis_key)
+
+File.open(filename) do |f|
+
+  current_resource = nil
+  current_headings = []
+
+  f.each_line.with_index do |tsv, i|
+    next if i.zero?
+
+    resource, _classified, root, score, heading = tsv.split(/\t/)
