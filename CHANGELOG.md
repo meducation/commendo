@@ -1,3 +1,6 @@
+# 0.0.9 / 2014-04-09
+* [BUGFIX] Fix similarity calculation for resources in many sets
+
 # 0.0.8 / 2014-04-09
 * [FEATURE] Allow degree of set membership to be included when adding data and incrementally increase scores when adding new data
 

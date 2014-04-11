@@ -52,6 +52,22 @@ module Commendo
       assert_equal expected, cs.similar_to('resource-1')
     end
 
+    def test_recommends_with_large_number_of_groups
+      redis = Redis.new(db: 15)
+      redis.flushdb
+      key_base = 'CommendoTests'
+      cs = ContentSet.new(redis, key_base)
+      (0..3000).each do |i|
+        cs.add('resource-1', ["group-#{i}", i/100.0], ["group-#{i+1}", i/20.0])
+        cs.add('resource-9', ["group-#{i}", i/100.0], ["group-#{i+1}", i/20.0])
+      end
+      cs.calculate_similarity
+      expected = [
+        {resource: 'resource-9', similarity: 1.0}
+      ]
+      assert_equal expected, cs.similar_to('resource-1')
+    end
+
     def test_recommends_when_extra_scores_added
       test_recommends_when_added_with_scores
       redis = Redis.new(db: 15)

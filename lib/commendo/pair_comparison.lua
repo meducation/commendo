@@ -4,8 +4,8 @@ local left_similarity_key = KEYS[3]
 local right_similarity_key = KEYS[4]
 
 local tmp_key_base = ARGV[1]
-local left = tonumber(ARGV[2])
-local right = tonumber(ARGV[3])
+local left = ARGV[2]
+local right = ARGV[3]
 local threshold = tonumber(ARGV[4])
 
 local function round(num, idp)
@@ -40,9 +40,14 @@ if table.getn(intersect) > 0 then
     end
 
     local similarity = round(intersect_score / union_score, 3)
+    redis.log(redis.LOG_NOTICE, 'Similarity from pair comparison for ' .. left_key .. ' ' .. right_key .. ', ' .. similarity .. ', ' .. threshold)
     if similarity > threshold then
+        redis.log(redis.LOG_NOTICE, 'Saving ' .. left_similarity_key .. ', ' .. similarity .. ', ' .. right)
         redis.call('ZADD', left_similarity_key, similarity, right)
+        redis.log(redis.LOG_NOTICE, 'Saving ' .. right_similarity_key .. ', ' .. similarity .. ', ' .. left)
         redis.call('ZADD', right_similarity_key, similarity, left)
+    else
+        redis.log(redis.LOG_NOTICE, 'NOT saving ' .. right_similarity_key .. ', ' .. similarity .. ', ' .. left)
     end
 end
 
