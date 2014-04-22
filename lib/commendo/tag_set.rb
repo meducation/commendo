@@ -21,9 +21,11 @@ module Commendo
       add(resource, *tags)
     end
 
-    def matches(resource, *tags)
+    def matches(resource, include, exclude = [])
       resource_tags = get(resource)
-      (resource_tags & tags).length > 0
+      can_include = include.nil? || include.empty? || (resource_tags & include).length > 0
+      should_exclude = !exclude.nil? && !exclude.empty? && (resource_tags & exclude).length > 0
+      return can_include && !should_exclude
     end
 
     def delete(resource)

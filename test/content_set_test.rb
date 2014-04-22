@@ -34,6 +34,27 @@ module Commendo
       assert_equal expected, cs.similar_to('resource-1')
     end
 
+    def test_recommends_limited_by_number
+      redis = Redis.new(db: 15)
+      redis.flushdb
+      key_base = 'CommendoTests'
+      cs = ContentSet.new(redis, key_base)
+      cs.add('resource-1', 'group-1', 'group-2')
+      cs.add('resource-2', 'group-1')
+      cs.add('resource-3', 'group-1', 'group-2')
+      cs.add('resource-4', 'group-2')
+      cs.calculate_similarity
+      expected = [
+        {resource: 'resource-3', similarity: 1.0},
+        {resource: 'resource-4', similarity: 0.667},
+        {resource: 'resource-2', similarity: 0.667}
+      ]
+      assert_equal expected[0..0], cs.similar_to('resource-1', 1)
+      assert_equal expected[0..1], cs.similar_to('resource-1', 2)
+      assert_equal expected, cs.similar_to('resource-1', 3)
+      assert_equal expected, cs.similar_to('resource-1', 99)
+    end
+
     def test_recommends_when_added_with_scores
       redis = Redis.new(db: 15)
       redis.flushdb
@@ -250,6 +271,29 @@ module Commendo
       assert_equal 3, actual.length
       assert contains_resource('5', actual)
       assert contains_resource('15', actual)
+      assert contains_resource('20', actual)
+
+    end
+
+    def test_filters_include_by_tag_collection_and_limit
+      redis = Redis.new(db: 15)
+      redis.flushdb
+      ts = TagSet.new(redis, 'CommendoTests:tags')
+      cs = ContentSet.new(redis, 'CommendoTests', ts)
+      (3..23).each do |group|
+        (3..23).each do |res|
+          cs.add(res, group) if res % group == 0
+          ts.add(res, 'mod3') if res.modulo(3).zero?
+          ts.add(res, 'mod4') if res.modulo(4).zero?
+          ts.add(res, 'mod5') if res.modulo(5).zero?
+        end
+      end
+      cs.calculate_similarity
+
+      actual = cs.filtered_similar_to(10, include: ['mod5'], limit: 2)
+      assert_equal 2, actual.length
+      assert contains_resource('5', actual)
+      #assert contains_resource('15', actual)
       assert contains_resource('20', actual)
 
     end

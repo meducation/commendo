@@ -85,17 +85,18 @@ module Commendo
       end
     end
 
-    def similar_to(resource)
+    def similar_to(resource, limit = 0)
+      finish = limit -1
       if resource.kind_of? Array
         keys = resource.map do |res|
           similarity_key(res)
         end
         tmp_key = "#{key_base}:tmp:#{SecureRandom.uuid}"
         redis.zunionstore(tmp_key, keys)
-        similar_resources = redis.zrevrange(tmp_key, 0, -1, with_scores: true)
+        similar_resources = redis.zrevrange(tmp_key, 0, finish, with_scores: true)
         redis.del(tmp_key)
       else
-        similar_resources = redis.zrevrange(similarity_key(resource), 0, -1, with_scores: true)
+        similar_resources = redis.zrevrange(similarity_key(resource), 0, finish, with_scores: true)
       end
       similar_resources.map do |resource|
         {resource: resource[0], similarity: resource[1].to_f}
@@ -103,11 +104,18 @@ module Commendo
     end
 
     def filtered_similar_to(resource, options = {})
-      similar = similar_to(resource)
-      return similar if @tag_set.nil? || options[:include].nil? && options[:exclude].nil?
-      similar.delete_if { |s| !options[:exclude].nil? && @tag_set.matches(s[:resource], *options[:exclude]) }
-      similar.delete_if { |s| !options[:include].nil? && !@tag_set.matches(s[:resource], *options[:include]) }
-      similar
+      if @tag_set.nil? || (options[:include].nil? && options[:exclude].nil?)
+        return similar_to(resource, options[:limit] || 0)
+      else
+        similar = similar_to(resource)
+        limit = options[:limit] || similar.length
+        filtered = []
+        similar.each do |s|
+          return filtered if filtered.length >= limit
+          filtered << s if @tag_set.matches(s[:resource], options[:include], options[:exclude])
+        end
+        return filtered
+      end
     end
 
     def similarity_key(resource)

@@ -1,21 +1,30 @@
 #!/usr/bin/env ruby
 
-redis_db = ARGV[0].to_i
-content_set_base_redis_key = ARGV[1]
-filename = ARGV[2]
-
 require 'redis'
 require 'commendo'
+require 'json'
 
-redis = Redis.new(db: 2)
-cs = Commendo::ContentSet.new(redis, content_set_base_redis_key)
+filename = ARGV[0]
+redis_db = ARGV[1].to_i
+base_key = ARGV[2]
 
+redis = Redis.new(db: redis_db, timeout: 60)
+cs = Commendo::ContentSet.new(redis, base_key)
+
+puts "Loading."
 File.open(filename) do |f|
+  f.each_line.with_index do |json, i|
+    print '.'
+    resource, scored_groups = JSON.parse(json)
+    cs.add(resource, *scored_groups)
+  end
+end
+puts "\nFinished loading"
 
-  current_resource = nil
-  current_headings = []
-
-  f.each_line.with_index do |tsv, i|
-    next if i.zero?
-
-    resource, _classified, root, score, heading = tsv.split(/\t/)
+puts 'Calculating similarities'
+pbar = nil
+cs.calculate_similarity do |key, i, total|
+  pbar ||= ProgressBar.new('Calculating similarity', total)
+  pbar.inc
+  #puts "Calculating similarity for #{i}/#{total} — #{key}"
+end

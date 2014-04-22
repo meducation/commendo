@@ -32,8 +32,8 @@ module Commendo
     def filtered_similar_to(resource, options = {})
       similar = similar_to(resource)
       return similar if @tag_set.nil? || options[:include].nil? && options[:exclude].nil?
-      similar.delete_if { |s| !options[:exclude].nil? && @tag_set.matches(s[:resource], *options[:exclude]) }
-      similar.delete_if { |s| !options[:include].nil? && !@tag_set.matches(s[:resource], *options[:include]) }
+      similar.delete_if { |s| !options[:exclude].nil? && @tag_set.matches(s[:resource], options[:exclude]) }
+      similar.delete_if { |s| !options[:include].nil? && !@tag_set.matches(s[:resource], options[:include]) }
       similar
     end
 
