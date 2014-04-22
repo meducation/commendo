@@ -1,3 +1,6 @@
+# 1.0.0 / 2014-04-22
+* [FEATURE] Add limits to similarity requests and bump to production release 1.0.0 :)
+
 # 0.0.9 / 2014-04-09
 * [BUGFIX] Fix similarity calculation for resources in many sets
 
