@@ -10,16 +10,15 @@ module Commendo
   class ContentSetTest < Minitest::Test
 
     def setup
-      redis = Redis.new(db: 15)
-      redis.flushdb
-      key_base = 'CommendoTests'
-      @cs = ContentSet.new(redis, key_base)
+      @redis = Redis.new(db: 15)
+      @redis.flushdb
+      @key_base = 'CommendoTests'
+      @cs = ContentSet.new(@redis, @key_base)
     end
 
     def test_gives_similarity_key_for_resource
-      redis = Redis.new(db: 15)
       key_base = 'CommendoTestsFooBarBaz'
-      cs = ContentSet.new(redis, key_base)
+      cs = ContentSet.new(@redis, key_base)
       assert_equal 'CommendoTestsFooBarBaz:similar:resource-1', cs.similarity_key('resource-1')
     end
 
@@ -81,10 +80,7 @@ module Commendo
     end
 
     def test_recommends_when_extra_scores_added
-      test_recommends_when_added_with_scores
-      redis = Redis.new(db: 15)
-      key_base = 'CommendoTests'
-      @cs = ContentSet.new(redis, key_base)
+      test_recommends_when_added_with_scores #sets up the content set
       @cs.add('resource-3', ['group-1', 1], ['group-3', 2])
       @cs.add('resource-4', ['group-2', 1])
       @cs.add_by_group('group-1', ['newource-9', 100], 'resource-2', 'resource-3')
@@ -177,10 +173,6 @@ module Commendo
       assert_equal expected_keys.sort, actual_keys.sort
     end
 
-    def test_calculate_deletes_old_values_first
-      skip
-    end
-
     def test_deletes_resource_from_everywhere
       (3..23).each do |group|
         (3..23).each do |res|
@@ -200,7 +192,30 @@ module Commendo
     end
 
     def test_remove_from_groups
-      
+      (3..23).each do |group|
+        (3..23).each do |res|
+          @cs.add(res, group) if res % group == 0
+        end
+      end
+      resource = 20
+      assert_equal ['4','5','10','20'].sort!, @cs.groups(resource).sort!
+      @cs.remove_from_groups(resource, 10)
+      assert_equal ['4','5','20'].sort!, @cs.groups(resource).sort!
+      @cs.remove_from_groups(resource, 4)
+      assert_equal ['5','20'].sort!, @cs.groups(resource).sort!
+    end
+
+    def test_remove_causes_similarity_to_change_when_recalculated
+      (3..23).each do |group|
+        (3..23).each do |res|
+          @cs.add(res, group) if res % group == 0
+        end
+      end
+      @cs.calculate_similarity
+      assert similar_to(@cs, 18, 12)
+      @cs.remove_from_groups(18, 6, 3)
+      @cs.calculate_similarity
+      refute similar_to(@cs, 18, 12)
     end
 
     def test_accepts_incremental_updates
@@ -218,11 +233,21 @@ module Commendo
       assert similar_to(@cs, 10, 12)
     end
 
+    def test_remove_and_calculate
+      (3..23).each do |group|
+        (3..23).each do |res|
+          @cs.add(res, group) if res % group == 0
+        end
+      end
+      @cs.calculate_similarity
+      assert similar_to(@cs, 18, 12)
+      @cs.remove_from_groups_and_calculate(18, 6, 3)
+      refute similar_to(@cs, 18, 12)
+    end
+
     def test_filters_include_by_tag_collection
-      redis = Redis.new(db: 15)
-      redis.flushdb
-      ts = TagSet.new(redis, 'CommendoTests:tags')
-      @cs = ContentSet.new(redis, 'CommendoTests', ts)
+      ts = TagSet.new(@redis, "#{@key_base}:tags")
+      @cs = ContentSet.new(@redis, @key_base, ts)
       (3..23).each do |group|
         (3..23).each do |res|
           @cs.add(res, group) if res % group == 0
@@ -242,10 +267,8 @@ module Commendo
     end
 
     def test_filters_include_by_tag_collection_and_limit
-      redis = Redis.new(db: 15)
-      redis.flushdb
-      ts = TagSet.new(redis, 'CommendoTests:tags')
-      @cs = ContentSet.new(redis, 'CommendoTests', ts)
+      ts = TagSet.new(@redis, "#{@key_base}:tags")
+      @cs = ContentSet.new(@redis, @key_base, ts)
       (3..23).each do |group|
         (3..23).each do |res|
           @cs.add(res, group) if res % group == 0
@@ -265,10 +288,8 @@ module Commendo
     end
 
     def test_filters_exclude_by_tag_collection
-      redis = Redis.new(db: 15)
-      redis.flushdb
-      ts = TagSet.new(redis, 'CommendoTests:tags')
-      @cs = ContentSet.new(redis, 'CommendoTests', ts)
+      ts = TagSet.new(@redis, "#{@key_base}:tags")
+      @cs = ContentSet.new(@redis, @key_base, ts)
       (3..23).each do |group|
         (3..23).each do |res|
           @cs.add(res, group) if res % group == 0
@@ -284,14 +305,12 @@ module Commendo
       assert contains_resource('5', actual)
       assert contains_resource('20', actual)
       refute contains_resource('15', actual)
-
     end
 
     def test_filters_includes_and_exclude_by_tag_collection
-      redis = Redis.new(db: 15)
-      redis.flushdb
-      ts = TagSet.new(redis, 'CommendoTests:tags')
-      @cs = ContentSet.new(redis, 'CommendoTests', ts)
+      ts = TagSet.new(@redis, "#{@key_base}:tags")
+      @cs = ContentSet.new(@redis, @key_base, ts)
+      #Build some test data
       (3..23).each do |group|
         (3..23).each do |res|
           @cs.add(res, group) if res % group == 0
@@ -315,14 +334,11 @@ module Commendo
       assert contains_resource('16', actual)
       refute contains_resource('15', actual)
       refute contains_resource('20', actual)
-
     end
 
     def test_recommends_for_many
-      redis = Redis.new(db: 15)
-      redis.flushdb
-      ts = TagSet.new(redis, 'CommendoTests:tags')
-      @cs = ContentSet.new(redis, 'CommendoTests', ts)
+      ts = TagSet.new(@redis, "#{@key_base}:tags")
+      @cs = ContentSet.new(@redis, @key_base, ts)
       (3..23).each do |group|
         (3..23).each do |res|
           @cs.add(res, group) if res % group == 0
@@ -351,10 +367,8 @@ module Commendo
     end
 
     def test_recommends_for_many_applies_filters
-      redis = Redis.new(db: 15)
-      redis.flushdb
-      ts = TagSet.new(redis, 'CommendoTests:tags')
-      @cs = ContentSet.new(redis, 'CommendoTests', ts)
+      ts = TagSet.new(@redis, "#{@key_base}:tags")
+      @cs = ContentSet.new(@redis, @key_base, ts)
       (3..23).each do |group|
         (3..23).each do |res|
           @cs.add(res, group) if res % group == 0
@@ -382,7 +396,7 @@ module Commendo
     end
 
     def contains_resource(resource, similarities)
-      similarities.select { |sim| sim[:resource] == "#{resource}" }.length > 0
+      !similarities.select { |sim| sim[:resource] == "#{resource}" }.empty?
     end
 
   end

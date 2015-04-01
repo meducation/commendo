@@ -8,6 +8,11 @@ module Commendo
       @redis, @key_base = redis, key_base
     end
 
+    def empty?
+      cursor, keys = redis.scan(0, match: "#{key_base}:*", count: 1)
+      cursor.to_i == 0
+    end
+
     def get(resource)
       redis.smembers(resource_key(resource)).sort
     end

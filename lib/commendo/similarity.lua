@@ -26,20 +26,21 @@ for _,group in ipairs(groups) do
 end
 --redis.log(redis.LOG_NOTICE, 'Found ' .. table.getn(group_keys) .. ' group keys')
 
---TODO change foo
+--TODO change unionfoo to a random slug
 local tmp_groups_union_key = tmp_key_base .. 'unionfoo'
 redis.call('ZUNIONSTORE', tmp_groups_union_key, table.getn(group_keys), unpack(group_keys))
 local resources = redis.call('ZRANGE', tmp_groups_union_key, 0, -1)
 
+--TODO change 'foo' to something much more unlikely
 local previous = 'foo'
 for _,to_compare in ipairs(resources) do
     --redis.log(redis.LOG_NOTICE, 'Comparing ' .. resource .. ' and ' .. to_compare)
     if to_compare ~= previous then
         previous = to_compare
-        if resource > to_compare then
+        if resource ~= to_compare then
           --redis.log(redis.LOG_NOTICE, 'Calculating similarity for ' .. resource .. ' and ' .. to_compare)
 
-            --TODO change bar
+            --TODO change bar to a random slug
             local tmp_pair_intersect_key = tmp_key_base .. 'bar'
             redis.call('ZINTERSTORE', tmp_pair_intersect_key, 2, resource_key, resource_key_base .. ':' .. to_compare)
             local intersect = redis.call('ZRANGE', tmp_pair_intersect_key, 0, -1, 'WITHSCORES')
@@ -51,7 +52,7 @@ for _,to_compare in ipairs(resources) do
                     intersect_score = intersect_score + intersect[i+1]
                 end
 
-                --TODO change baz
+                --TODO change baz to a random slug
                 local tmp_pair_union_key = tmp_key_base .. 'baz'
                 redis.call('ZUNIONSTORE', tmp_pair_union_key, 2, resource_key, resource_key_base .. ':' .. to_compare)
 
@@ -66,7 +67,7 @@ for _,to_compare in ipairs(resources) do
                 if similarity > threshold then
                   --redis.log(redis.LOG_NOTICE, resource .. ' and ' .. to_compare .. ' scored ' .. similarity)
                     redis.call('ZADD', sim_key_base .. ':' .. resource, similarity, to_compare)
-                    redis.call('ZADD', sim_key_base .. ':' .. to_compare, similarity, resource)
+                  --redis.call('ZADD', sim_key_base .. ':' .. to_compare, similarity, resource)
                 end
             end
         end

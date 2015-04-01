@@ -1,3 +1,6 @@
+# 1.1.0 / 2015-04-01
+* [FEATURE] Add ability to remove a resource from a group and recalculate similarity
+
 # 1.0.0 / 2014-04-22
 * [FEATURE] Add limits to similarity requests and bump to production release 1.0.0 :)
 

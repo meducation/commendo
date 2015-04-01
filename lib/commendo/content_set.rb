@@ -38,6 +38,10 @@ module Commendo
       calculate_similarity_for_resource(resource, 0)
     end
 
+    def groups(resource)
+      redis.zrange(resource_key(resource), 0, -1)
+    end
+
     def delete(resource)
       similar = similar_to(resource)
       similar.each do |other_resource|
@@ -54,18 +58,17 @@ module Commendo
       #TODO make this use scan for scaling
       keys = redis.keys("#{resource_key_base}:*")
       keys.each_with_index do |key, i|
+        resource = key.gsub(/^#{resource_key_base}:/, '')
+        similarity_key = similarity_key(resource)
+        redis.del(similarity_key)
         yield(key, i, keys.length) if block_given?
         completed = redis.eval(similarity_lua, keys: [key], argv: [tmp_key_base, resource_key_base, similar_key_base, group_key_base, threshold])
         if completed == SET_TOO_LARGE_FOR_LUA
-          calculate_similarity_for_key(key, threshold)
+          calculate_similarity_for_key_resource(key, resource, threshold)
         end
       end
     end
 
-    def calculate_similarity_for_key(key, threshold)
-      resource = key.gsub(/^#{resource_key_base}:/, '')
-      calculate_similarity_for_key_resource(key, resource, threshold)
-    end
 
     def calculate_similarity_for_resource(resource, threshold)
       key = resource_key(resource)
@@ -73,12 +76,14 @@ module Commendo
     end
 
     def calculate_similarity_for_key_resource(key, resource, threshold)
-      groups = redis.zrange(resource_key(resource), 0, -1)
+      groups = groups(resource)
       group_keys = groups.map { |group| group_key(group) }
       tmp_key = "#{tmp_key_base}:#{SecureRandom.uuid}"
       redis.zunionstore(tmp_key, group_keys)
       resources = redis.zrange(tmp_key, 0, -1)
       redis.del(tmp_key)
+      similarity_key = similarity_key(resource)
+      redis.del(similarity_key)
       resources.each do |to_compare|
         next if resource == to_compare
         redis.eval(pair_comparison_lua, keys: [key, resource_key(to_compare), similarity_key(resource), similarity_key(to_compare)], argv: [tmp_key_base, resource, to_compare, threshold])
@@ -104,7 +109,7 @@ module Commendo
     end
 
     def filtered_similar_to(resource, options = {})
-      if @tag_set.nil? || (options[:include].nil? && options[:exclude].nil?)
+      if @tag_set.nil? || (options[:include].nil? && options[:exclude].nil?) || @tag_set.empty?
         return similar_to(resource, options[:limit] || 0)
       else
         similar = similar_to(resource)
@@ -120,6 +125,20 @@ module Commendo
 
     def similarity_key(resource)
       "#{similar_key_base}:#{resource}"
+    end
+
+    def remove_from_groups(resource, *groups)
+      resource_key = resource_key(resource)
+      redis.zrem(resource_key, groups)
+      groups.each do |group|
+        group_key = group_key(group)
+        redis.zrem(group_key, resource)
+      end
+    end
+
+    def remove_from_groups_and_calculate(resource, *groups)
+      remove_from_groups(resource, *groups)
+      calculate_similarity_for_resource(resource, 0)
     end
 
     private
