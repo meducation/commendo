@@ -1,0 +1,32 @@
+#!/usr/bin/env ruby
+
+require 'redis'
+require 'commendo'
+require 'progressbar'
+
+filename = ARGV[0]
+redis_db = ARGV[1].to_i
+base_key = ARGV[2]
+
+redis = Redis.new(db: redis_db, timeout: 60)
+cs = Commendo::ContentSet.new(redis, base_key)
+
+puts "Loading."
+file_length = `wc -l #{filename}`.to_i
+pbar = ProgressBar.new('Loading TSV file', file_length)
+File.open(filename) do |f|
+  f.each_line.with_index do |line, i|
+    pbar.inc
+    ids = line.split("\t")
+    resource = ids.shift
+    cs.add(resource, *ids)
+  end
+end
+puts "\nFinished loading"
+
+puts 'Calculating similarities'
+pbar = nil
+cs.calculate_similarity do |key, i, total|
+  pbar ||= ProgressBar.new('Calculating similarity', total)
+  pbar.inc
+end
