@@ -33,8 +33,12 @@ module Commendo
       return can_include && !should_exclude
     end
 
-    def delete(resource)
+    def delete(resource, *tags)
+      if tags.empty?
       redis.del(resource_key(resource))
+      else
+        redis.srem(resource_key(resource), tags)
+      end
     end
 
     private

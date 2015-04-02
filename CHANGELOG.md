@@ -1,3 +1,6 @@
+# 1.2.0 / 2015-04-01
+* [FEATURE] Add ability to remove select tags for a resource
+
 # 1.1.0 / 2015-04-01
 * [FEATURE] Add ability to remove a resource from a group and recalculate similarity
 

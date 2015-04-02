@@ -50,7 +50,7 @@ module Commendo
       assert_equal ['qip', 'qux'], @ts.get(2)
     end
 
-    def test_deletes_tags_for_resource
+    def test_deletes_all_tags_for_resource
       @ts.set(1, 'foo', 'bar', 'baz')
       @ts.set(2, 'qux', 'qip')
       assert_equal ['bar', 'baz', 'foo'], @ts.get(1)
@@ -58,6 +58,13 @@ module Commendo
       @ts.delete(1)
       assert_equal [], @ts.get(1)
       assert_equal ['qip', 'qux'], @ts.get(2)
+    end
+
+    def test_deletes_given_tags_for_resource
+      assert_equal [], @ts.get(1)
+      @ts.set(1, 'foo', 'bar', 'baz', 'qux', 'qip')
+      @ts.delete(1, 'qux', 'qip')
+      assert_equal ['bar', 'baz', 'foo'], @ts.get(1)
     end
 
     def test_matches_tags
