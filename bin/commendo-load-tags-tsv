@@ -17,7 +17,7 @@ pbar = ProgressBar.new('Loading TSV file', file_length)
 File.open(filename) do |f|
   f.each_line.with_index do |line, i|
     pbar.inc
-    tags = line.split("\t")
+    tags = line.trim.split("\t")
     resource = tags.shift
     ts.add(resource, *tags)
   end

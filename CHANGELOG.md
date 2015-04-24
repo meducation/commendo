@@ -1,3 +1,6 @@
+# 1.2.1 / 2015-04-24
+* [BUGFIX] Fixed trailing "\n" in load commands
+
 # 1.2.0 / 2015-04-01
 * [FEATURE] Add ability to remove select tags for a resource
 
