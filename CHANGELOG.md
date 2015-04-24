@@ -1,4 +1,4 @@
-# 1.2.1 / 2015-04-24
+# 1.2.2 / 2015-04-24
 * [BUGFIX] Fixed trailing "\n" in load commands
 
 # 1.2.0 / 2015-04-01
