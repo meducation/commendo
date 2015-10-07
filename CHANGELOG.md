@@ -1,3 +1,6 @@
+# 1.2.3 / 2015-10-07
+* [BUGFIX] Fix exception when calculating similarity on empty resources
+
 # 1.2.2 / 2015-04-24
 * [BUGFIX] Fixed trailing "\n" in load commands
 

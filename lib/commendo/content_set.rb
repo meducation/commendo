@@ -77,6 +77,7 @@ module Commendo
 
     def calculate_similarity_for_key_resource(key, resource, threshold)
       groups = groups(resource)
+      return if groups.empty?
       group_keys = groups.map { |group| group_key(group) }
       tmp_key = "#{tmp_key_base}:#{SecureRandom.uuid}"
       redis.zunionstore(tmp_key, group_keys)

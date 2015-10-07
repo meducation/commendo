@@ -159,6 +159,10 @@ module Commendo
       assert_equal expected, @cs.similar_to(18)
     end
 
+    def test_calculate_copes_with_missing_resource
+      @cs.calculate_similarity_for_resource('999999999999', 0.1)
+    end
+
     def test_calculate_yields_after_each
       (3..23).each do |group|
         (3..23).each do |res|
