@@ -8,7 +8,7 @@ require 'commendo'
 
 module Commendo
 
-  class WeightedGroupTest < Minitest::Test
+  class RedisWeightedGroupTest < Minitest::Test
 
     def setup
       super
@@ -30,6 +30,13 @@ module Commendo
         end
       end
       [@cs1, @cs2, @cs3].each { |cs| cs.calculate_similarity }
+      @weighted_group = Commendo::WeightedGroup.new(:redis,
+                                                    redis: @redis,
+                                                    key_base: 'CommendoTests:WeightedGroup',
+                                                    content_sets: [{cs: @cs1, weight: 1.0},
+                                                                   {cs: @cs2, weight: 10.0},
+                                                                   {cs: @cs3, weight: 100.0}]
+      )
     end
 
     include TestsForWeightedGroups

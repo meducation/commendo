@@ -17,6 +17,14 @@ module Commendo
       @cs = ContentSet.new(:redis, redis: @redis, key_base: @key_base)
     end
 
+    def create_tag_set(kb)
+      Commendo::TagSet.new(:redis, redis: @redis, key_base: kb)
+    end
+
+    def create_content_set(ts, key_base = @key_base)
+      Commendo::ContentSet.new(:redis, redis: @redis, key_base: key_base, tag_set: ts)
+    end
+
     include TestsForContentSets
 
   end

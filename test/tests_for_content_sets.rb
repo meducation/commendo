@@ -9,8 +9,8 @@ module TestsForContentSets
   end
 
   def test_recommends_for_many_applies_filters
-    ts = Commendo::TagSet.new(:redis, redis: @redis, key_base: "#{@key_base}:tags")
-    @cs = Commendo::ContentSet.new(:redis, redis: @redis, key_base: @key_base, tag_set: ts)
+    ts = create_tag_set("#{@key_base}:tags")
+    @cs = create_content_set(ts)
     (3..23).each do |group|
       (3..23).each do |res|
         @cs.add(res, group) if res % group == 0
@@ -34,8 +34,8 @@ module TestsForContentSets
   end
 
   def test_recommends_for_many
-    ts = Commendo::TagSet.new(:redis, redis: @redis, key_base: "#{@key_base}:tags")
-    @cs = Commendo::ContentSet.new(:redis, redis: @redis, key_base: @key_base, tag_set: ts)
+    ts = create_tag_set("#{@key_base}:tags")
+    @cs = create_content_set(ts)
     (3..23).each do |group|
       (3..23).each do |res|
         @cs.add(res, group) if res % group == 0
@@ -64,8 +64,8 @@ module TestsForContentSets
   end
 
   def test_filters_includes_and_exclude_by_tag_collection
-    ts = Commendo::TagSet.new(:redis, redis: @redis, key_base: "#{@key_base}:tags")
-    @cs = Commendo::ContentSet.new(:redis, redis: @redis, key_base: @key_base, tag_set: ts)
+    ts = create_tag_set("#{@key_base}:tags")
+    @cs = create_content_set(ts)
     #Build some test data
     (3..23).each do |group|
       (3..23).each do |res|
@@ -93,8 +93,8 @@ module TestsForContentSets
   end
 
   def test_filters_exclude_by_tag_collection
-    ts = Commendo::TagSet.new(:redis, redis: @redis, key_base: "#{@key_base}:tags")
-    @cs = Commendo::ContentSet.new(:redis, redis: @redis, key_base: @key_base, tag_set: ts)
+    ts = create_tag_set("#{@key_base}:tags")
+    @cs = create_content_set(ts)
     (3..23).each do |group|
       (3..23).each do |res|
         @cs.add(res, group) if res % group == 0
@@ -113,8 +113,8 @@ module TestsForContentSets
   end
 
   def test_filters_include_by_tag_collection_and_limit
-    ts = Commendo::TagSet.new(:redis, redis: @redis, key_base: "#{@key_base}:tags")
-    @cs = Commendo::ContentSet.new(:redis, redis: @redis, key_base: @key_base, tag_set: ts)
+    ts = create_tag_set("#{@key_base}:tags")
+    @cs = create_content_set(ts)
     (3..23).each do |group|
       (3..23).each do |res|
         @cs.add(res, group) if res % group == 0
@@ -134,8 +134,8 @@ module TestsForContentSets
   end
 
   def test_filters_include_by_tag_collection
-    ts = Commendo::TagSet.new(:redis, redis: @redis, key_base: "#{@key_base}:tags")
-    @cs = Commendo::ContentSet.new(:redis, redis: @redis, key_base: @key_base, tag_set: ts)
+    ts = create_tag_set("#{@key_base}:tags")
+    @cs = create_content_set(ts)
     (3..23).each do |group|
       (3..23).each do |res|
         @cs.add(res, group) if res % group == 0
@@ -383,7 +383,7 @@ module TestsForContentSets
 
   def test_gives_similarity_key_for_resource
     key_base = 'CommendoTestsFooBarBaz'
-    cs = Commendo::ContentSet.new(:redis, redis: @redis, key_base: key_base)
+    cs = create_content_set(nil, key_base)
     assert_equal 'CommendoTestsFooBarBaz:similar:resource-1', cs.similarity_key('resource-1')
   end
 end

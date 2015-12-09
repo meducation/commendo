@@ -16,6 +16,10 @@ module Commendo
       @ts = TagSet.new(:redis, redis: @redis, key_base: 'TagSetTest')
     end
 
+    def create_tag_set(kb)
+      Commendo::TagSet.new(:redis, redis: @redis, key_base: kb)
+    end
+
     include TestsForTagSets
 
   end
