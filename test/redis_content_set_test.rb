@@ -14,7 +14,7 @@ module Commendo
       @redis = Redis.new(db: 15)
       @redis.flushdb
       @key_base = 'CommendoTests'
-      @cs = ContentSet.new(@redis, @key_base)
+      @cs = ContentSet.new(:redis, redis: @redis, key_base: @key_base)
     end
 
     include TestsForContentSets

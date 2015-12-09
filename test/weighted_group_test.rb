@@ -14,10 +14,10 @@ module Commendo
       super
       @redis ||= Redis.new(db: 15)
       @redis.flushdb
-      @tag_set = TagSet.new(@redis, 'CommendoTests:Tags')
-      @cs1 = ContentSet.new(@redis, 'CommendoTests:ContentSet1', @tag_set)
-      @cs2 = ContentSet.new(@redis, 'CommendoTests:ContentSet2', @tag_set)
-      @cs3 = ContentSet.new(@redis, 'CommendoTests:ContentSet3', @tag_set)
+      @tag_set = TagSet.new(:redis, redis: @redis, key_base: 'CommendoTests:Tags')
+      @cs1 = ContentSet.new(:redis, redis: @redis, key_base: 'CommendoTests:ContentSet1', tag_set: @tag_set)
+      @cs2 = ContentSet.new(:redis, redis: @redis, key_base: 'CommendoTests:ContentSet2', tag_set: @tag_set)
+      @cs3 = ContentSet.new(:redis, redis: @redis, key_base: 'CommendoTests:ContentSet3', tag_set: @tag_set)
       (3..23).each do |group|
         (3..23).each do |res|
           @cs1.add_by_group(group, res) if res.modulo(group).zero? && res.modulo(2).zero?

@@ -13,7 +13,7 @@ module Commendo
     def setup
       @redis = Redis.new(db: 15)
       @redis.flushdb
-      @ts = TagSet.new(@redis, 'TagSetTest')
+      @ts = TagSet.new(:redis, redis: @redis, key_base: 'TagSetTest')
     end
 
     include TestsForTagSets
