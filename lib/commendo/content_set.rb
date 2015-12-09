@@ -11,9 +11,8 @@ module Commendo
                    :similarity_key,
                    :remove_from_groups, :remove_from_groups_and_calculate
 
-    def initialize(type, args)
-      @backend = Commendo::RedisBacked::ContentSet.new(args[:redis], args[:key_base], args[:tag_set]) if type == :redis
-      # @backend = Commendo::MySqlBacked::ContentSet.new(args[:redis], args[:key_base], args[:tag_set]) if type == :mysql
+    def initialize(args)
+      @backend = Commendo::RedisBacked::ContentSet.new(args[:key_base], args[:tag_set]) if Commendo.config.backend == :redis
       raise 'Unrecognised backend type, try :redis or :mysql' if @backend.nil?
     end
 

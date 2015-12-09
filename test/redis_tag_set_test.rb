@@ -11,13 +11,18 @@ module Commendo
   class RedisTagSetTest < Minitest::Test
 
     def setup
-      @redis = Redis.new(db: 15)
-      @redis.flushdb
-      @ts = TagSet.new(:redis, redis: @redis, key_base: 'TagSetTest')
+      Commendo.config do |config|
+        config.backend = :redis
+        config.host = 'localhost'
+        config.port = 6379
+        config.database = 15
+      end
+      Redis.new(host: Commendo.config.host, port: Commendo.config.port, db: Commendo.config.database).flushdb
+      @ts = TagSet.new(key_base: 'TagSetTest')
     end
 
     def create_tag_set(kb)
-      Commendo::TagSet.new(:redis, redis: @redis, key_base: kb)
+      Commendo::TagSet.new(key_base: kb)
     end
 
     include TestsForTagSets

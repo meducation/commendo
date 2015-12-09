@@ -11,18 +11,23 @@ module Commendo
   class ContentSetTest < Minitest::Test
 
     def setup
-      @redis = Redis.new(db: 15)
-      @redis.flushdb
+      Commendo.config do |config|
+        config.backend = :redis
+        config.host = 'localhost'
+        config.port = 6379
+        config.database = 15
+      end
+      Redis.new(host: Commendo.config.host, port: Commendo.config.port, db: Commendo.config.database).flushdb
       @key_base = 'CommendoTests'
-      @cs = ContentSet.new(:redis, redis: @redis, key_base: @key_base)
+      @cs = ContentSet.new(key_base: @key_base)
     end
 
     def create_tag_set(kb)
-      Commendo::TagSet.new(:redis, redis: @redis, key_base: kb)
+      Commendo::TagSet.new(key_base: kb)
     end
 
     def create_content_set(ts, key_base = @key_base)
-      Commendo::ContentSet.new(:redis, redis: @redis, key_base: key_base, tag_set: ts)
+      Commendo::ContentSet.new(key_base: key_base, tag_set: ts)
     end
 
     include TestsForContentSets

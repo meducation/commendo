@@ -12,12 +12,17 @@ module Commendo
 
     def setup
       super
-      @redis ||= Redis.new(db: 15)
-      @redis.flushdb
-      @tag_set = TagSet.new(:redis, redis: @redis, key_base: 'CommendoTests:Tags')
-      @cs1 = ContentSet.new(:redis, redis: @redis, key_base: 'CommendoTests:ContentSet1', tag_set: @tag_set)
-      @cs2 = ContentSet.new(:redis, redis: @redis, key_base: 'CommendoTests:ContentSet2', tag_set: @tag_set)
-      @cs3 = ContentSet.new(:redis, redis: @redis, key_base: 'CommendoTests:ContentSet3', tag_set: @tag_set)
+      Commendo.config do |config|
+        config.backend = :redis
+        config.host = 'localhost'
+        config.port = 6379
+        config.database = 15
+      end
+      Redis.new(host: Commendo.config.host, port: Commendo.config.port, db: Commendo.config.database).flushdb
+      @tag_set = TagSet.new(key_base: 'CommendoTests:Tags')
+      @cs1 = ContentSet.new(key_base: 'CommendoTests:ContentSet1', tag_set: @tag_set)
+      @cs2 = ContentSet.new(key_base: 'CommendoTests:ContentSet2', tag_set: @tag_set)
+      @cs3 = ContentSet.new(key_base: 'CommendoTests:ContentSet3', tag_set: @tag_set)
       (3..23).each do |group|
         (3..23).each do |res|
           @cs1.add_by_group(group, res) if res.modulo(group).zero? && res.modulo(2).zero?
@@ -30,9 +35,7 @@ module Commendo
         end
       end
       [@cs1, @cs2, @cs3].each { |cs| cs.calculate_similarity }
-      @weighted_group = Commendo::WeightedGroup.new(:redis,
-                                                    redis: @redis,
-                                                    key_base: 'CommendoTests:WeightedGroup',
+      @weighted_group = Commendo::WeightedGroup.new(key_base: 'CommendoTests:WeightedGroup',
                                                     content_sets: [{cs: @cs1, weight: 1.0},
                                                                    {cs: @cs2, weight: 10.0},
                                                                    {cs: @cs3, weight: 100.0}]

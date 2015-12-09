@@ -3,8 +3,8 @@ module Commendo
   class WeightedGroup
     extend Forwardable
 
-    def initialize(type, args)
-      @backend = RedisBacked::WeightedGroup.new(args[:redis], args[:key_base], *args[:content_sets]) if type == :redis
+    def initialize(args)
+      @backend = RedisBacked::WeightedGroup.new(args[:key_base], *args[:content_sets]) if Commendo.config.backend == :redis
       raise 'Unrecognised backend type, try :redis or :mysql' if @backend.nil?
     end
 

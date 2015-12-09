@@ -5,8 +5,10 @@ module Commendo
 
       attr_accessor :redis, :key_base, :tag_set
 
-      def initialize(redis, key_base, tag_set = nil)
-        @redis, @key_base, @tag_set = redis, key_base, tag_set
+      def initialize(key_base, tag_set = nil)
+        @redis = Redis.new(host: Commendo.config.host, port: Commendo.config.port, db: Commendo.config.database)
+        @key_base = key_base
+        @tag_set = tag_set
       end
 
       def add_by_group(group, *resources)

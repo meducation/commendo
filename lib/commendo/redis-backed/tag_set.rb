@@ -4,8 +4,9 @@ module Commendo
 
       attr_accessor :redis, :key_base
 
-      def initialize(redis, key_base)
-        @redis, @key_base = redis, key_base
+      def initialize(key_base)
+        @redis = Redis.new(host: Commendo.config.host, port: Commendo.config.port, db: Commendo.config.database)
+        @key_base = redis, key_base
       end
 
       def empty?

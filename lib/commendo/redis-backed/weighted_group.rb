@@ -5,8 +5,10 @@ module Commendo
 
       attr_accessor :content_sets, :redis, :key_base, :tag_set
 
-      def initialize(redis, key_base, *content_sets)
-        @content_sets, @redis, @key_base = content_sets, redis, key_base
+      def initialize(key_base, *content_sets)
+        @redis = Redis.new(host: Commendo.config.host, port: Commendo.config.port, db: Commendo.config.database)
+        @key_base = key_base
+        @content_sets = content_sets
       end
 
       def similar_to(resource, limit = 0)
