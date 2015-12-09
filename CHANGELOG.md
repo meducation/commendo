@@ -1,3 +1,6 @@
+# 1.2.4 / 2015-12-09
+* [BUGFIX] Fixed bug with TagSet#empty? reporting empty when only one key present
+
 # 1.2.3 / 2015-10-07
 * [BUGFIX] Fix exception when calculating similarity on empty resources
 

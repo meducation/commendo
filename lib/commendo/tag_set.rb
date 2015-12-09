@@ -10,7 +10,7 @@ module Commendo
 
     def empty?
       cursor, keys = redis.scan(0, match: "#{key_base}:*", count: 1)
-      cursor.to_i == 0
+      cursor.to_i == 0 && keys.empty?
     end
 
     def get(resource)
