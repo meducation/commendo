@@ -11,7 +11,7 @@ base_key = ARGV[2]
 redis = Redis.new(db: redis_db, timeout: 60)
 cs = Commendo::ContentSet.new(redis, base_key)
 
-puts "Loading."
+puts 'Loading.'
 file_length = `wc -l #{filename}`.to_i
 pbar = ProgressBar.new('Loading TSV file', file_length)
 File.open(filename) do |f|
