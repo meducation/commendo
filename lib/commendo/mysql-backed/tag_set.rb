@@ -5,6 +5,7 @@ module Commendo
       attr_accessor :mysql, :key_base
 
       def initialize(key_base)
+        @mysql = Mysql2::Client.new(Commendo.config.to_hash)
         @key_base = key_base
       end
 

@@ -321,7 +321,8 @@ module TestsForContentSets
         {resource: 'resource-1', similarity: 0.769},
         {resource: 'resource-3', similarity: 0.706}
     ]
-    assert_equal expected, @cs.similar_to('resource-2')
+    actual = @cs.similar_to('resource-2')
+    assert_equal expected, actual
   end
 
   def test_recommends_with_large_number_of_groups
@@ -347,7 +348,8 @@ module TestsForContentSets
         {resource: 'resource-2', similarity: 0.818},
         {resource: 'resource-4', similarity: 0.714}
     ]
-    assert_equal expected, @cs.similar_to('resource-1')
+    actual = @cs.similar_to('resource-1')
+    assert_equal expected, actual
   end
 
   def test_recommends_limited_by_number
@@ -381,9 +383,4 @@ module TestsForContentSets
     assert_equal expected, @cs.similar_to('resource-1')
   end
 
-  def test_gives_similarity_key_for_resource
-    key_base = 'CommendoTestsFooBarBaz'
-    cs = create_content_set(nil, key_base)
-    assert_equal 'CommendoTestsFooBarBaz:similar:resource-1', cs.similarity_key('resource-1')
-  end
 end

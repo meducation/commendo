@@ -6,6 +6,7 @@ module Commendo
       attr_accessor :mysql, :content_sets, :key_base, :tag_set
 
       def initialize(key_base, *content_sets)
+        @mysql = Mysql2::Client.new(Commendo.config.to_hash)
         @key_base = key_base
         @content_sets = content_sets
       end

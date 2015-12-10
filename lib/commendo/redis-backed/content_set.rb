@@ -72,7 +72,6 @@ module Commendo
         end
       end
 
-
       def calculate_similarity_for_resource(resource, threshold)
         key = resource_key(resource)
         calculate_similarity_for_key_resource(key, resource, threshold)

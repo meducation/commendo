@@ -30,6 +30,12 @@ module Commendo
       Commendo::ContentSet.new(key_base: key_base, tag_set: ts)
     end
 
+    def test_gives_similarity_key_for_resource
+      key_base = 'CommendoTestsFooBarBaz'
+      cs = create_content_set(nil, key_base)
+      assert_equal 'CommendoTestsFooBarBaz:similar:resource-1', cs.similarity_key('resource-1')
+    end
+
     include TestsForContentSets
 
   end
