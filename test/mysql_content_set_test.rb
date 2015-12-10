@@ -8,16 +8,19 @@ require 'commendo'
 
 module Commendo
 
-  class RedisContentSetTest < Minitest::Test
+  class MySqlContentSetTest < Minitest::Test
 
     def setup
       Commendo.config do |config|
-        config.backend = :redis
+        config.backend = :mysql
         config.host = 'localhost'
-        config.port = 6379
-        config.database = 15
+        config.port = 3306
+        config.database = 'commendo_test'
+        config.username = 'commendo'
+        config.password = 'commendo123'
       end
-      Redis.new(host: Commendo.config.host, port: Commendo.config.port, db: Commendo.config.database).flushdb
+      client = Mysql2::Client.new(Commendo.config.to_hash)
+      %w(Groups Resources Tags).each {|table| client.query("DELETE FROM #{table};") }
       @key_base = 'CommendoTests'
       @cs = ContentSet.new(key_base: @key_base)
     end

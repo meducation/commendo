@@ -12,7 +12,8 @@ module Commendo
                    :remove_from_groups, :remove_from_groups_and_calculate
 
     def initialize(args)
-      @backend = Commendo::RedisBacked::ContentSet.new(args[:key_base], args[:tag_set]) if Commendo.config.backend == :redis
+      @backend = RedisBacked::ContentSet.new(args[:key_base], args[:tag_set]) if Commendo.config.backend == :redis
+      @backend = MySqlBacked::ContentSet.new(args[:key_base], args[:tag_set]) if Commendo.config.backend == :mysql
       raise 'Unrecognised backend type, try :redis or :mysql' if @backend.nil?
     end
 

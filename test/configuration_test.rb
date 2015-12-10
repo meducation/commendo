@@ -18,7 +18,7 @@ module Commendo
       assert_equal 'localhost', Commendo::Configuration.new.host
       assert_equal 6379, Commendo::Configuration.new.port
       assert_equal 15, Commendo::Configuration.new.database
-      assert_nil Commendo::Configuration.new.user
+      assert_nil Commendo::Configuration.new.username
       assert_nil Commendo::Configuration.new.password
     end
 
@@ -37,7 +37,7 @@ module Commendo
       assert_equal 'localhost', config.host
       assert_equal 6379, config.port
       assert_equal 15, config.database
-      assert_nil config.user
+      assert_nil config.username
       assert_nil config.password
     end
 
@@ -47,7 +47,7 @@ module Commendo
         config.host = 'mysql.example.com'
         config.port = 9999
         config.database = 'some_mysql_db'
-        config.user = 'root'
+        config.username = 'root'
         config.password = 'Passw0rd!!'
       end
 
@@ -56,8 +56,14 @@ module Commendo
       assert_equal 'mysql.example.com', config.host
       assert_equal 9999, config.port
       assert_equal 'some_mysql_db', config.database
-      assert_equal 'root', config.user
+      assert_equal 'root', config.username
       assert_equal 'Passw0rd!!', config.password
+    end
+
+    def test_to_hash
+      expected = {backend: :redis, host: 'localhost', port: 6379, database: 15, username: nil, password: nil}
+      actual = Commendo::Configuration.new.to_hash
+      assert_equal expected, actual
     end
 
   end

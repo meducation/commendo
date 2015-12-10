@@ -78,22 +78,6 @@ module Commendo
         calculate_similarity_for_key_resource(key, resource, threshold)
       end
 
-      def calculate_similarity_for_key_resource(key, resource, threshold)
-        groups = groups(resource)
-        return if groups.empty?
-        group_keys = groups.map { |group| group_key(group) }
-        tmp_key = "#{tmp_key_base}:#{SecureRandom.uuid}"
-        redis.zunionstore(tmp_key, group_keys)
-        resources = redis.zrange(tmp_key, 0, -1)
-        redis.del(tmp_key)
-        similarity_key = similarity_key(resource)
-        redis.del(similarity_key)
-        resources.each do |to_compare|
-          next if resource == to_compare
-          redis.eval(pair_comparison_lua, keys: [key, resource_key(to_compare), similarity_key(resource), similarity_key(to_compare)], argv: [tmp_key_base, resource, to_compare, threshold])
-        end
-      end
-
       def similar_to(resource, limit = 0)
         finish = limit -1
         if resource.kind_of? Array
@@ -146,6 +130,22 @@ module Commendo
       end
 
       private
+
+      def calculate_similarity_for_key_resource(key, resource, threshold)
+        groups = groups(resource)
+        return if groups.empty?
+        group_keys = groups.map { |group| group_key(group) }
+        tmp_key = "#{tmp_key_base}:#{SecureRandom.uuid}"
+        redis.zunionstore(tmp_key, group_keys)
+        resources = redis.zrange(tmp_key, 0, -1)
+        redis.del(tmp_key)
+        similarity_key = similarity_key(resource)
+        redis.del(similarity_key)
+        resources.each do |to_compare|
+          next if resource == to_compare
+          redis.eval(pair_comparison_lua, keys: [key, resource_key(to_compare), similarity_key(resource), similarity_key(to_compare)], argv: [tmp_key_base, resource, to_compare, threshold])
+        end
+      end
 
       def similarity_lua
         @similarity_lua ||= load_similarity_lua

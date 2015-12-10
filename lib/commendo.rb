@@ -12,6 +12,10 @@ require 'commendo/redis-backed/content_set'
 require 'commendo/redis-backed/tag_set'
 require 'commendo/redis-backed/weighted_group'
 
+require 'commendo/mysql-backed/content_set'
+require 'commendo/mysql-backed/tag_set'
+require 'commendo/mysql-backed/weighted_group'
+
 module Commendo
 
   def self.config
