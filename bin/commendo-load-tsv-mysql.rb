@@ -7,19 +7,23 @@ require 'progressbar'
 filename = ARGV[0]
 
 Commendo.config do |config|
-  config.backend = :redis
+  config.backend = :mysql
   config.host = 'localhost'
-  config.port = 6379
-  config.database = 15
+  config.port = 3306
+  config.database = 'commendo_test'
+  config.username = 'commendo'
+  config.password = 'commendo123'
 end
-Redis.new(host: Commendo.config.host, port: Commendo.config.port, db: Commendo.config.database).flushdb
-cs = Commendo::ContentSet.new(key_base: 'MeducationViews')
+client = Mysql2::Client.new(Commendo.config.to_hash)
+%w(ResourceGroup ResourceTag Similarity Groups Resources Tags).each {|table| client.query("DELETE FROM #{table};") }
+
+cs = Commendo::ContentSet.new(key_base: '')
 
 puts 'Loading.'
 file_length = `wc -l #{filename}`.to_i
 pbar = ProgressBar.new('Loading TSV file', file_length)
 File.open(filename) do |f|
-  f.each_line.with_index do |line, i|
+  f.each_line do |line|
     pbar.inc
     ids = line.strip.split("\t")
     resource = ids.shift
@@ -30,9 +34,8 @@ pbar.finish
 puts "\nFinished loading"
 
 puts 'Calculating similarities'
-pbar = nil
+pbar = ProgressBar.new('Calculating similarity', total)
 cs.calculate_similarity do |key, i, total|
-  pbar ||= ProgressBar.new('Calculating similarity', total)
   pbar.inc
 end
 pbar.finish

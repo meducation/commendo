@@ -6,7 +6,7 @@ module Commendo
       attr_accessor :redis, :key_base, :tag_set
 
       def initialize(key_base, tag_set = nil)
-        @redis = Redis.new(host: Commendo.config.host, port: Commendo.config.port, db: Commendo.config.database)
+        @redis = Redis.new(host: Commendo.config.host, port: Commendo.config.port, db: Commendo.config.database, timeout: 120)
         @key_base = key_base
         @tag_set = tag_set
       end
