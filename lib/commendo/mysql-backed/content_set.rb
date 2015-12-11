@@ -25,11 +25,11 @@ module Commendo
 
       def add_single(resource, group, score)
         # $stderr.puts "Adding #{resource} to #{group}"
-        @mysql.query("INSERT IGNORE INTO Resources (name) VALUES ('#{resource}');")
-        @mysql.query("INSERT IGNORE INTO Groups (name) VALUES ('#{group}');")
+        @mysql.query("INSERT IGNORE INTO Resources (keybase, name) VALUES ('#{@key_base}', '#{resource}');")
+        @mysql.query("INSERT IGNORE INTO Groups (keybase, name) VALUES ('#{@key_base}', '#{group}');")
         query = "INSERT INTO ResourceGroup (resource_id, group_id, score) VALUES (
-                     (SELECT id FROM Resources WHERE name='#{resource}'),
-                     (SELECT id FROM Groups WHERE name='#{group}'),
+                     (SELECT id FROM Resources WHERE keybase='#{@key_base}' AND name='#{resource}'),
+                     (SELECT id FROM Groups WHERE keybase='#{@key_base}' AND name='#{group}'),
                      #{score})
                  ON DUPLICATE KEY UPDATE score = score + #{score}"
         # $stderr.puts query
@@ -66,20 +66,33 @@ WHERE Resources.name='#{resource}';")
 
       def similar_to(resource, limit = 0)
         resource = [resource] unless resource.is_a? Array
-        query = "SELECT DISTINCT Similar.name, Similarity.similarity FROM Resources AS Similar
+        query = "SELECT Similar.name, Similarity.similarity FROM Resources AS Similar
 JOIN Similarity ON Similarity.similar_id=Similar.id
 JOIN Resources AS src ON Similarity.resource_id=src.id
-WHERE src.name IN (#{resource.map { |r| "'#{r}'" }.join(',')})
-ORDER BY Similarity.similarity DESC, Similar.name DESC;"
+WHERE src.keybase='#{@key_base}' AND src.name IN (#{resource.map { |r| "'#{r}'" }.join(',')})
+ORDER BY Similarity.similarity DESC, Similar.name DESC"
+        query += "\nLIMIT #{limit}" if limit > 0
         results = @mysql.query(query)
-        similar = results.map { |r| {resource: r['name'], similarity: r['similarity']} }
+        similar = results.map { |r| {resource: r['name'], similarity: r['similarity'].round(3)} }
         return similar if resource.length == 1
         grouped = similar.group_by { |r| r[:resource] }
-        grouped.map { |resource, similar| {resource: resource, similarity: similar.inject(0.0) { |sum, s| sum += s[:similarity] }} }
+        grouped.map { |resource, similar| {resource: resource, similarity: similar.inject(0.0) { |sum, s| sum += s[:similarity] }} }.sort_by { |h| [h[:similarity], h[:resource]] }.reverse
 
       end
 
       def filtered_similar_to(resource, options = {})
+        if @tag_set.nil? || (options[:include].nil? && options[:exclude].nil?) || @tag_set.empty?
+          return similar_to(resource, options[:limit] || 0)
+        else
+          similar = similar_to(resource)
+          limit = options[:limit] || similar.length
+          filtered = []
+          similar.each do |s|
+            return filtered if filtered.length >= limit
+            filtered << s if @tag_set.matches(s[:resource], options[:include], options[:exclude])
+          end
+          return filtered
+        end
       end
 
       def remove_from_groups(resource, *groups)
@@ -112,17 +125,21 @@ SET Resources.score = rg_scores.score;'
       end
 
       def update_intersect_scores(resource = nil)
-        query = '
+        @mysql.transaction do |client|
+          client.query("DELETE Similarity FROM Similarity JOIN Resources ON Similarity.resource_id=Resources.id WHERE Resources.keybase='#{@key_base}'")
+          query = '
 INSERT INTO Similarity (resource_id, similar_id, intersect)
 SELECT intersect.l_id, intersect.r_id, intersect.score FROM
 (
   SELECT l.resource_id AS l_id, r.resource_id AS r_id, SUM(l.Score) + SUM(r.Score) AS score
   FROM ResourceGroup AS l
   INNER JOIN ResourceGroup r ON l.group_id = r.group_id
+  WHERE l.resource_id <> r.resource_id
   GROUP BY l.resource_id, r.resource_id
 ) AS intersect
 ON DUPLICATE KEY UPDATE intersect = score;'
-        @mysql.query(query)
+          client.query(query)
+        end
       end
 
       def update_similarity(resource = nil)

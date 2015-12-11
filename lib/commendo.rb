@@ -1,5 +1,6 @@
 require 'forwardable'
 require 'mysql2'
+require_relative 'mysql2/client'
 require 'redis'
 
 require 'commendo/configuration'

@@ -10,7 +10,7 @@ module TestsForContentSets
 
   def test_recommends_for_many_applies_filters
     ts = create_tag_set("#{@key_base}:tags")
-    @cs = create_content_set(ts)
+    @cs = create_content_set(@key_base, ts)
     (3..23).each do |group|
       (3..23).each do |res|
         @cs.add(res, group) if res % group == 0
@@ -35,7 +35,7 @@ module TestsForContentSets
 
   def test_recommends_for_many
     ts = create_tag_set("#{@key_base}:tags")
-    @cs = create_content_set(ts)
+    @cs = create_content_set(@key_base, ts)
     (3..23).each do |group|
       (3..23).each do |res|
         @cs.add(res, group) if res % group == 0
@@ -65,7 +65,7 @@ module TestsForContentSets
 
   def test_filters_includes_and_exclude_by_tag_collection
     ts = create_tag_set("#{@key_base}:tags")
-    @cs = create_content_set(ts)
+    @cs = create_content_set(@key_base, ts)
     #Build some test data
     (3..23).each do |group|
       (3..23).each do |res|
@@ -94,7 +94,7 @@ module TestsForContentSets
 
   def test_filters_exclude_by_tag_collection
     ts = create_tag_set("#{@key_base}:tags")
-    @cs = create_content_set(ts)
+    @cs = create_content_set(@key_base, ts)
     (3..23).each do |group|
       (3..23).each do |res|
         @cs.add(res, group) if res % group == 0
@@ -114,7 +114,7 @@ module TestsForContentSets
 
   def test_filters_include_by_tag_collection_and_limit
     ts = create_tag_set("#{@key_base}:tags")
-    @cs = create_content_set(ts)
+    @cs = create_content_set(@key_base, ts)
     (3..23).each do |group|
       (3..23).each do |res|
         @cs.add(res, group) if res % group == 0
@@ -135,7 +135,7 @@ module TestsForContentSets
 
   def test_filters_include_by_tag_collection
     ts = create_tag_set("#{@key_base}:tags")
-    @cs = create_content_set(ts)
+    @cs = create_content_set(@key_base, ts)
     (3..23).each do |group|
       (3..23).each do |res|
         @cs.add(res, group) if res % group == 0
@@ -226,20 +226,6 @@ module TestsForContentSets
     refute similar_to(@cs, 18, 12)
   end
 
-  def test_calculate_yields_after_each
-    (3..23).each do |group|
-      (3..23).each do |res|
-        @cs.add_by_group(group, res) if res % group == 0
-      end
-    end
-    expected_keys = ['CommendoTests:resources:3', 'CommendoTests:resources:4', 'CommendoTests:resources:5', 'CommendoTests:resources:6', 'CommendoTests:resources:7', 'CommendoTests:resources:8', 'CommendoTests:resources:9', 'CommendoTests:resources:10', 'CommendoTests:resources:11', 'CommendoTests:resources:12', 'CommendoTests:resources:13', 'CommendoTests:resources:14', 'CommendoTests:resources:15', 'CommendoTests:resources:16', 'CommendoTests:resources:17', 'CommendoTests:resources:18', 'CommendoTests:resources:19', 'CommendoTests:resources:20', 'CommendoTests:resources:21', 'CommendoTests:resources:22', 'CommendoTests:resources:23']
-    actual_keys = []
-    @cs.calculate_similarity { |key, index, total|
-      actual_keys << key
-    }
-    assert_equal expected_keys.sort, actual_keys.sort
-  end
-
   def test_calculate_copes_with_missing_resource
     @cs.calculate_similarity_for_resource('999999999999', 0.1)
   end
@@ -277,12 +263,19 @@ module TestsForContentSets
     assert_equal expected, @cs.similar_to(18)
   end
 
-  def test_recommendations_are_isolated_by_redis_db
-    skip
-  end
-
   def test_recommendations_are_isolated_by_key_base
-    skip
+    cs1 = create_content_set('ContentSetOne')
+    cs2 = create_content_set('ContentSetTwo')
+    cs1.add('1', 'a group')
+    cs2.add('2', 'a group')
+    cs1.add('3', 'a group')
+    cs2.add('4', 'a group')
+    cs1.add('5', 'a group')
+    cs2.add('6', 'a group')
+    cs1.calculate_similarity
+    cs2.calculate_similarity
+    assert_equal [{resource: '5', similarity: 1.0}, {resource: '3', similarity: 1.0}], cs1.similar_to('1')
+    assert_equal [{resource: '6', similarity: 1.0}, {resource: '4', similarity: 1.0}], cs2.similar_to('2')
   end
 
   def test_recommends_when_added_by_group_with_scores

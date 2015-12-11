@@ -29,7 +29,7 @@ module Commendo
       Commendo::TagSet.new(key_base: kb)
     end
 
-    def create_content_set(ts, key_base = @key_base)
+    def create_content_set(key_base, ts = nil)
       Commendo::ContentSet.new(key_base: key_base, tag_set: ts)
     end
 
