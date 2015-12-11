@@ -32,7 +32,7 @@ module Commendo
 
     def test_gives_similarity_key_for_resource
       key_base = 'CommendoTestsFooBarBaz'
-      cs = create_content_set(nil, key_base)
+      cs = create_content_set(key_base)
       assert_equal 'CommendoTestsFooBarBaz:similar:resource-1', cs.similarity_key('resource-1')
     end
 
