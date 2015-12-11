@@ -57,7 +57,7 @@ WHERE Resources.name='#{resource}';")
       def calculate_similarity(threshold = 0)
         update_union_scores()
         update_intersect_scores()
-        update_similarity()
+        update_similarity(nil, threshold)
       end
 
       def calculate_similarity_for_resource(resource, threshold = 0)
@@ -69,7 +69,9 @@ WHERE Resources.name='#{resource}';")
         query = "SELECT Similar.name, Similarity.similarity FROM Resources AS Similar
 JOIN Similarity ON Similarity.similar_id=Similar.id
 JOIN Resources AS src ON Similarity.resource_id=src.id
-WHERE src.keybase='#{@key_base}' AND src.name IN (#{resource.map { |r| "'#{r}'" }.join(',')})
+WHERE src.keybase='#{@key_base}'
+AND src.name IN (#{resource.map { |r| "'#{r}'" }.join(',')})
+AND Similarity.similarity IS NOT NULL
 ORDER BY Similarity.similarity DESC, Similar.name DESC"
         query += "\nLIMIT #{limit}" if limit > 0
         results = @mysql.query(query)
@@ -142,13 +144,21 @@ ON DUPLICATE KEY UPDATE intersect = score;'
         end
       end
 
-      def update_similarity(resource = nil)
-        query = '
+      def update_similarity(resource = nil, threshold = 0)
+        @mysql.transaction do |client|
+
+          query = "
 UPDATE Similarity
 JOIN Resources AS l ON Similarity.resource_id=l.id
 JOIN Resources AS r ON Similarity.similar_id=r.id
-SET Similarity.similarity = Similarity.intersect / (l.score + R.score);'
-        @mysql.query(query)
+SET Similarity.similarity = Similarity.intersect / (l.score + R.score)
+WHERE l.keybase='#{@key_base}' AND r.keybase='#{@key_base}'
+AND Similarity.intersect / (l.score + R.score) > #{threshold};
+"
+          client.query(query)
+          # client.query("DELETE Similarity FROM Similarity JOIN Resources ON Similarity.resource_id=Resources.id WHERE Resources.keybase='#{@key_base}' AND Similarity.similarity <= #{threshold}")
+
+        end
       end
 
     end
