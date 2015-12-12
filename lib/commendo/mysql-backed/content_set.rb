@@ -7,6 +7,7 @@ module Commendo
 
       def initialize(key_base, tag_set = nil)
         config_hash = Commendo.config.to_hash
+        config_hash[:flags] = Mysql2::Client::MULTI_STATEMENTS
         @mysql = Mysql2::Client.new(config_hash)
         @key_base = key_base
         @tag_set = tag_set
@@ -19,83 +20,39 @@ module Commendo
 
       def add(resource, *groups)
         groups.map! { |g| g.is_a?(Array) ? g : [g, 1] } #sets default score of 1
-        groups.each { |g| add_single(resource, g[0], g[1]) }
+        query = add_single_prepared_query
+        groups.each { |(g, s)| query.execute(@key_base, resource, g, s, s) }
       end
 
       def add_single(resource, group, score)
-        # $stderr.puts "Adding #{resource} to #{group}"
-        @mysql.query("INSERT IGNORE INTO Resources (keybase, name) VALUES ('#{@key_base}', '#{resource}');")
-        @mysql.query("INSERT IGNORE INTO Groups (keybase, name) VALUES ('#{@key_base}', '#{group}');")
-        query = "INSERT INTO ResourceGroup (resource_id, group_id, score) VALUES (
-                     (SELECT id FROM Resources WHERE keybase='#{@key_base}' AND name='#{resource}'),
-                     (SELECT id FROM Groups WHERE keybase='#{@key_base}' AND name='#{group}'),
-                     #{score})
-                 ON DUPLICATE KEY UPDATE score = score + #{score}"
-        # $stderr.puts query
-        @mysql.query(query)
+        add(resource, [group, score])
       end
 
       def add_and_calculate(resource, *groups)
         add(resource, *groups)
-        calculate_similarity_for_resource(resource)
       end
 
       def groups(resource)
-        result = @mysql.query("
-SELECT DISTINCT Groups.name FROM Groups
-INNER JOIN ResourceGroup ON ResourceGroup.group_id=Groups.id
-INNER JOIN Resources ON ResourceGroup.resource_id=Resources.id
-WHERE Resources.name='#{resource}';")
-        result.map { |r| r['name'] }
+        groups_prepared_query.execute(@key_base, resource).map {|r| r['groupname']}
       end
 
       def delete(resource)
-        @mysql.query("DELETE FROM Resources WHERE Resources.name='#{resource}'")
+        delete_prepared_query.execute(@key_base, resource)
       end
 
       def calculate_similarity(threshold = 0)
-        result = @mysql.query("SELECT DISTINCT name FROM Resources WHERE Resources.keybase='#{@key_base}'")
-        result.each_with_index do |r,i|
-          calculate_similarity_for_resource(r['name'], threshold)
-          yield("#{@key_base}:resources:#{r['name']}", i, result.count) if block_given?
-        end
       end
 
       def calculate_similarity_for_resource(resource, threshold = 0)
-        update_union_scores(resource)
-        update_intersect_scores(resource)
-        update_similarity(resource, threshold)
       end
 
-      def similar_to(resource, limit = 0)
+      def similar_to(resource, limit = 1000)
         resource = [resource] unless resource.is_a? Array
-        query = "
-(
-  SELECT Similar.name AS name, Similarity.similarity AS similarity
-  FROM Resources AS Similar
-  JOIN Similarity ON Similarity.similar_id=Similar.id
-  JOIN Resources AS src ON Similarity.resource_id=src.id
-  WHERE src.keybase='#{@key_base}'
-  AND src.name IN (#{resource.map { |r| "'#{r}'" }.join(',')})
-  AND Similarity.similarity IS NOT NULL
-) UNION ALL (
-  SELECT Similar.name AS name, Similarity.similarity AS similarity
-  FROM Resources AS Similar
-  JOIN Similarity ON Similarity.resource_id=Similar.id
-  JOIN Resources AS src ON Similarity.similar_id=src.id
-  WHERE src.keybase='#{@key_base}'
-  AND src.name IN (#{resource.map { |r| "'#{r}'" }.join(',')})
-  AND Similarity.similarity IS NOT NULL
-)
-ORDER BY similarity DESC, name DESC
-"
-        query += "\nLIMIT #{limit}" if limit > 0
-        results = @mysql.query(query)
-        similar = results.map { |r| {resource: r['name'], similarity: r['similarity'].round(3)} }
+        results = @mysql.query(similar_to_prepared_query(@key_base, resource, limit))
+        similar = results.map { |r| {resource: r['similar'], similarity: r['similarity'].round(3)} }
         return similar if resource.length == 1
         grouped = similar.group_by { |r| r[:resource] }
         grouped.map { |resource, similar| {resource: resource, similarity: similar.inject(0.0) { |sum, s| sum += s[:similarity] }} }.sort_by { |h| [h[:similarity], h[:resource]] }.reverse
-
       end
 
       def filtered_similar_to(resource, options = {})
@@ -114,13 +71,7 @@ ORDER BY similarity DESC, name DESC
       end
 
       def remove_from_groups(resource, *groups)
-        r = @mysql.query("SELECT id FROM Resources WHERE name='#{resource}';").first
-        return if r.nil?
-        group_ids = @mysql.query("SELECT id FROM Groups WHERE name IN (#{groups.map { |g| "'#{g}'" }.join(',')});")
-        group_ids = group_ids.map { |r| r['id'] }
-        return if group_ids.empty?
-        result = @mysql.query("DELETE FROM ResourceGroup WHERE resource_id=#{r['id']} AND group_id IN (#{group_ids.join(',')})")
-        result
+        @mysql.query(remove_from_groups_prepared_query(@key_base, resource, groups))
       end
 
       def remove_from_groups_and_calculate(resource, *groups)
@@ -130,62 +81,40 @@ ORDER BY similarity DESC, name DESC
 
       private
 
-      def update_union_scores(resource)
-        query = "
-UPDATE Resources
-JOIN (
-  SELECT resource_id, SUM(ResourceGroup.score) AS score
-  FROM ResourceGroup
-  JOIN Resources ON ResourceGroup.resource_id=Resources.id
-  WHERE Resources.keybase='#{@key_base}' AND Resources.name='#{resource}'
-  GROUP BY resource_id
-) AS rg_scores ON rg_scores.resource_id=Resources.id
-SET Resources.score = rg_scores.score
-"
-        @mysql.query(query)
+      def add_single_prepared_query
+        @add_single_prepared_query ||= @mysql.prepare('INSERT INTO Resource (keybase, name, groupname, score) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE score = score + ?')
       end
 
-      def update_intersect_scores(resource)
-        #TODO make this update resource by resource
-
-        @mysql.query("
-DELETE Similarity
-FROM Similarity
-JOIN Resources ON (Similarity.resource_id=Resources.id OR Similarity.similar_id=Resources.id)
-WHERE Resources.keybase='#{@key_base}'
-AND Resources.name='#{resource}'
-")
-        query = "
-INSERT INTO Similarity (resource_id, similar_id, intersect)
-SELECT intersect.l_id, intersect.r_id, intersect.score FROM
-(
-  SELECT l.resource_id AS l_id, r.resource_id AS r_id, SUM(l.Score) + SUM(r.Score) AS score
-  FROM ResourceGroup AS l
-  INNER JOIN ResourceGroup r ON l.group_id=r.group_id
-  JOIN Resources ON (l.resource_id=Resources.id OR r.resource_id=Resources.id)
-  WHERE Resources.keybase='#{@key_base}'
-  AND Resources.name='#{resource}'
-  AND l.resource_id < r.resource_id
-  GROUP BY l.resource_id, r.resource_id
-) AS intersect
-ON DUPLICATE KEY UPDATE intersect = score"
-        @mysql.query(query)
+      def groups_prepared_query
+        @groups_prepared_query ||= @mysql.prepare('SELECT DISTINCT groupname FROM Resource WHERE keybase=? AND name=?')
       end
 
-      def update_similarity(resource, threshold = 0)
+      def delete_prepared_query
+        @delete_prepared_query ||= @mysql.prepare('DELETE FROM Resource WHERE keybase = ? AND name = ?')
+      end
 
-        query = "
-UPDATE Similarity
-JOIN Resources AS l ON Similarity.resource_id=l.id
-JOIN Resources AS r ON Similarity.similar_id=r.id
-SET Similarity.similarity = Similarity.intersect / (l.score + R.score)
-WHERE (l.name='#{resource}' OR r.name='#{resource}')
-AND l.keybase='#{@key_base}'
-AND r.keybase='#{@key_base}'
-AND Similarity.intersect / (l.score + R.score) > #{threshold};
-"
-        @mysql.query(query)
+      def remove_from_groups_prepared_query(keybase, name, groups)
+        "
+DELETE FROM Resource WHERE keybase = '#{keybase}' AND name = '#{name}' AND groupname IN (#{groups.map { |r| "'#{r}'" }.join(',')})"
+      end
 
+      def similar_to_prepared_query(keybase, resources, limit)
+        "
+SELECT similar, intersect_score, l_union, r_union, intersect_score / (l_union + r_union) AS similarity
+FROM (
+  SELECT r.name AS similar,
+  SUM(l.score + r.score) AS intersect_score,
+  (SELECT SUM(score) FROM Resource WHERE keybase = l.keybase AND name = l.name) AS l_union,
+  (SELECT SUM(score) FROM Resource WHERE keybase = r.keybase AND name = r.name) AS r_union
+  FROM Resource AS l
+  JOIN Resource AS r ON l.keybase = r.keybase AND l.groupname = r.groupname
+  WHERE l.keybase = '#{keybase}'
+  AND l.name IN (#{resources.map { |r| "'#{r}'" }.join(',')})
+  AND l.name <> r.name
+  GROUP BY l.name, r.name
+) AS similar_resources
+ORDER BY similarity DESC, similar DESC
+LIMIT #{limit}"
       end
 
     end

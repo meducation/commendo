@@ -3,9 +3,11 @@ module TestsForTagSets
   def test_adds_tags_for_resource
     assert_equal [], @ts.get(1)
     @ts.add(1, 'foo', 'bar', 'baz')
-    assert_equal %w(bar baz foo).sort, @ts.get(1).sort
+    expected = @ts.get(1)
+    assert_equal %w(bar baz foo).sort, expected.sort
     @ts.add(1, 'qux', 'qip')
-    assert_equal %w(bar baz foo qip qux).sort, @ts.get(1).sort
+    expected = @ts.get(1)
+    assert_equal %w(bar baz foo qip qux).sort, expected.sort
   end
 
   def test_isolates_by_key_base

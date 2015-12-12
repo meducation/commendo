@@ -21,7 +21,7 @@ module Commendo
         config.password = 'commendo123'
       end
       client = Mysql2::Client.new(Commendo.config.to_hash)
-      %w(Groups Resources Tags).each {|table| client.query("DELETE FROM #{table};") }
+      %w(Tags Resource).each {|table| client.query("DELETE FROM #{table};") }
       @tag_set = TagSet.new(key_base: 'CommendoTests:Tags')
       @cs1 = ContentSet.new(key_base: 'CommendoTests:ContentSet1', tag_set: @tag_set)
       @cs2 = ContentSet.new(key_base: 'CommendoTests:ContentSet2', tag_set: @tag_set)

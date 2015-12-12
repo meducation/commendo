@@ -16,8 +16,7 @@ Commendo.config do |config|
   config.password = 'commendo123'
 end
 client = Mysql2::Client.new(Commendo.config.to_hash)
-%w(ResourceGroup ResourceTag Similarity Groups Resources Tags).each {|table| client.query("DELETE FROM #{table};") }
-
+client.query("DELETE FROM Resource WHERE keybase='#{key_base}';")
 cs = Commendo::ContentSet.new(key_base: key_base)
 
 puts 'Loading.'
@@ -34,11 +33,11 @@ end
 pbar.finish
 puts "\nFinished loading"
 
-puts 'Calculating similarities'
-# pbar = nil
-cs.calculate_similarity do |key, i, total|
-  pbar ||= ProgressBar.new('Calculating similarity', total)
-  # pbar.inc
-  $stderr.puts key
-end
-pbar.finish
+# puts 'Calculating similarities'
+# # pbar = nil
+# cs.calculate_similarity do |key, i, total|
+#   pbar ||= ProgressBar.new('Calculating similarity', total)
+#   # pbar.inc
+#   $stderr.puts key
+# end
+# pbar.finish

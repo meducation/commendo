@@ -11,25 +11,26 @@ module Commendo
       end
 
       def empty?
-        result = @mysql.query("SELECT t.name FROM Tags t JOIN ResourceTag rt ON t.id=rt.tag_id WHERE t.keybase='#{@key_base}'")
+        result = empty_prepared_query.execute(@key_base)
         result.count.zero?
       end
 
       def get(resource)
-        result = @mysql.query("SELECT t.name FROM Tags t JOIN ResourceTag rt ON t.id=rt.tag_id JOIN Resources r ON r.id=rt.resource_id WHERE t.keybase='#{@key_base}' AND r.Name='#{resource}'")
-        result.map { |r| r['name'] }
+        result = get_tags_prepared_query.execute(@key_base, resource)
+        result.map { |r| r['tag'] }
       end
 
       def add(resource, *tags)
+        return if tags.empty?
         @mysql.transaction do |client|
-          insert_tags(client, resource, tags)
+          insert_tags(resource, tags)
         end
       end
 
       def set(resource, *tags)
         @mysql.transaction do |client|
-          delete_all_tags(client, resource)
-          insert_tags(client, resource, tags)
+          delete(resource)
+          insert_tags(resource, tags) unless tags.empty?
         end
       end
 
@@ -41,30 +42,38 @@ module Commendo
       end
 
       def delete(resource, *tags)
-        return delete_all_tags(@mysql, resource) if tags.empty?
-        query = "
-DELETE rt FROM ResourceTag rt
-JOIN Resources r ON rt.resource_id=r.id
-JOIN Tags t ON rt.tag_id=t.id
-WHERE t.keybase='#{@key_base}'
-AND r.name='#{resource}'
-AND t.name IN (#{tags.map { |t| "'#{t}'" }.join(',')})"
-        @mysql.query(query)
+        if tags.empty?
+          delete_all_tags_prepared_query.execute(@key_base, resource)
+        else
+          tags.each { |t| delete_tags_prepared_query.execute(@key_base, resource, t) }
+        end
       end
 
       private
 
-      def delete_all_tags(client, resource)
-        client.query("DELETE rt FROM ResourceTag rt JOIN Resources r ON rt.resource_id=r.id WHERE r.keybase='#{@key_base}' AND r.name='#{resource}'")
+      def insert_tags(resource, tags)
+        tags.each { |t| insert_prepared_query.execute(@key_base, resource, t) }
       end
 
-      def insert_tags(client, resource, tags)
-        return if tags.empty?
-        client.query("INSERT IGNORE INTO Resources (keybase, name) VALUES ('#{@key_base}', '#{resource}');")
-        tags.each { |t| client.query("INSERT IGNORE INTO Tags (keybase, name) VALUES ('#{@key_base}', '#{t}');") }
-        tags.each { |t| client.query("INSERT IGNORE INTO ResourceTag (resource_id, tag_id) VALUES ((SELECT id FROM Resources WHERE keybase='#{@key_base}' AND name='#{resource}'), (SELECT id FROM Tags WHERE keybase='#{@key_base}' AND name='#{t}'));") }
+      def get_tags_prepared_query
+        @get_tags_prepared_query ||= @mysql.prepare('SELECT tag FROM Tags t WHERE keybase = ? AND name = ?')
       end
 
+      def delete_all_tags_prepared_query
+        @delete_all_tags_prepared_query ||= @mysql.prepare('DELETE FROM Tags WHERE keybase = ? AND name = ?')
+      end
+
+      def delete_tags_prepared_query
+        @delete_tags_prepared_query ||= @mysql.prepare('DELETE FROM Tags WHERE keybase = ? AND name = ? AND tag = ?')
+      end
+
+      def insert_prepared_query
+        @insert_prepared_query ||= @mysql.prepare('INSERT IGNORE INTO Tags (keybase, name, tag) VALUES (?,?,?)')
+      end
+
+      def empty_prepared_query
+        @empty_prepared_query ||= @mysql.prepare('SELECT tag FROM Tags WHERE keybase = ? LIMIT 1')
+      end
 
     end
   end
