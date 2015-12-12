@@ -5,6 +5,8 @@ module Commendo
 
       attr_accessor :mysql, :key_base, :tag_set
 
+      DEFAULT_LIMIT = 1000
+
       def initialize(key_base, tag_set = nil)
         config_hash = Commendo.config.to_hash
         config_hash[:flags] = Mysql2::Client::MULTI_STATEMENTS
@@ -33,7 +35,7 @@ module Commendo
       end
 
       def groups(resource)
-        groups_prepared_query.execute(@key_base, resource).map {|r| r['groupname']}
+        groups_prepared_query.execute(@key_base, resource).map { |r| r['groupname'] }
       end
 
       def delete(resource)
@@ -46,7 +48,7 @@ module Commendo
       def calculate_similarity_for_resource(resource, threshold = 0)
       end
 
-      def similar_to(resource, limit = 1000)
+      def similar_to(resource, limit = DEFAULT_LIMIT)
         resource = [resource] unless resource.is_a? Array
         results = @mysql.query(similar_to_prepared_query(@key_base, resource, limit))
         similar = results.map { |r| {resource: r['similar'], similarity: r['similarity'].round(3)} }
@@ -57,7 +59,7 @@ module Commendo
 
       def filtered_similar_to(resource, options = {})
         if @tag_set.nil? || (options[:include].nil? && options[:exclude].nil?) || @tag_set.empty?
-          return similar_to(resource, options[:limit] || 0)
+          return similar_to(resource, options[:limit] || DEFAULT_LIMIT)
         else
           similar = similar_to(resource)
           limit = options[:limit] || similar.length
