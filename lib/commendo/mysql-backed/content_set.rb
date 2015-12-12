@@ -139,8 +139,7 @@ SET Resources.score = rg_scores.score;'
       end
 
       def update_intersect_scores(resource = nil)
-        @mysql.transaction do |client|
-          client.query("DELETE Similarity FROM Similarity JOIN Resources ON Similarity.resource_id=Resources.id WHERE Resources.keybase='#{@key_base}'")
+          @mysql.query("DELETE Similarity FROM Similarity JOIN Resources ON Similarity.resource_id=Resources.id WHERE Resources.keybase='#{@key_base}'")
           query = '
 INSERT INTO Similarity (resource_id, similar_id, intersect)
 SELECT intersect.l_id, intersect.r_id, intersect.score FROM
@@ -152,8 +151,7 @@ SELECT intersect.l_id, intersect.r_id, intersect.score FROM
   GROUP BY l.resource_id, r.resource_id
 ) AS intersect
 ON DUPLICATE KEY UPDATE intersect = score;'
-          client.query(query)
-        end
+          @mysql.query(query)
       end
 
       def update_similarity(resource = nil, threshold = 0)
