@@ -65,13 +65,26 @@ WHERE Resources.name='#{resource}';")
 
       def similar_to(resource, limit = 0)
         resource = [resource] unless resource.is_a? Array
-        query = "SELECT Similar.name, Similarity.similarity FROM Resources AS Similar
-JOIN Similarity ON Similarity.similar_id=Similar.id
-JOIN Resources AS src ON Similarity.resource_id=src.id
-WHERE src.keybase='#{@key_base}'
-AND src.name IN (#{resource.map { |r| "'#{r}'" }.join(',')})
-AND Similarity.similarity IS NOT NULL
-ORDER BY Similarity.similarity DESC, Similar.name DESC"
+        query = "
+(
+  SELECT Similar.name AS name, Similarity.similarity AS similarity
+  FROM Resources AS Similar
+  JOIN Similarity ON Similarity.similar_id=Similar.id
+  JOIN Resources AS src ON Similarity.resource_id=src.id
+  WHERE src.keybase='#{@key_base}'
+  AND src.name IN (#{resource.map { |r| "'#{r}'" }.join(',')})
+  AND Similarity.similarity IS NOT NULL
+) UNION ALL (
+  SELECT Similar.name AS name, Similarity.similarity AS similarity
+  FROM Resources AS Similar
+  JOIN Similarity ON Similarity.resource_id=Similar.id
+  JOIN Resources AS src ON Similarity.similar_id=src.id
+  WHERE src.keybase='#{@key_base}'
+  AND src.name IN (#{resource.map { |r| "'#{r}'" }.join(',')})
+  AND Similarity.similarity IS NOT NULL
+)
+ORDER BY similarity DESC, name DESC
+"
         query += "\nLIMIT #{limit}" if limit > 0
         results = @mysql.query(query)
         similar = results.map { |r| {resource: r['name'], similarity: r['similarity'].round(3)} }
@@ -135,7 +148,7 @@ SELECT intersect.l_id, intersect.r_id, intersect.score FROM
   SELECT l.resource_id AS l_id, r.resource_id AS r_id, SUM(l.Score) + SUM(r.Score) AS score
   FROM ResourceGroup AS l
   INNER JOIN ResourceGroup r ON l.group_id = r.group_id
-  WHERE l.resource_id <> r.resource_id
+  WHERE l.resource_id < r.resource_id
   GROUP BY l.resource_id, r.resource_id
 ) AS intersect
 ON DUPLICATE KEY UPDATE intersect = score;'
