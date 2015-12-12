@@ -35,8 +35,9 @@ pbar.finish
 puts "\nFinished loading"
 
 puts 'Calculating similarities'
-pbar = ProgressBar.new('Calculating similarity', 2)
-pbar.inc
-cs.calculate_similarity
-pbar.inc
+pbar = nil
+cs.calculate_similarity do |key, i, total|
+  pbar ||= ProgressBar.new('Calculating similarity', total)
+  pbar.inc
+end
 pbar.finish

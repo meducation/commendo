@@ -54,13 +54,17 @@ WHERE Resources.name='#{resource}';")
       end
 
       def calculate_similarity(threshold = 0)
-        update_union_scores()
-        update_intersect_scores()
-        update_similarity(nil, threshold)
+        result = @mysql.query("SELECT DISTINCT name FROM Resources WHERE Resources.keybase='#{@key_base}'")
+        result.each_with_index do |r,i|
+          calculate_similarity_for_resource(r['name'], threshold)
+          yield("#{@key_base}:resources:#{r['name']}", i, result.count) if block_given?
+        end
       end
 
       def calculate_similarity_for_resource(resource, threshold = 0)
-        calculate_similarity(threshold)
+        update_union_scores(resource)
+        update_intersect_scores(resource)
+        update_similarity(resource, threshold)
       end
 
       def similar_to(resource, limit = 0)
@@ -127,48 +131,61 @@ ORDER BY similarity DESC, name DESC
       private
 
       def update_union_scores(resource = nil)
-        query = '
+        query = "
 UPDATE Resources
 JOIN (
   SELECT resource_id, SUM(score) AS score
   FROM ResourceGroup
   GROUP BY resource_id
 ) AS rg_scores ON rg_scores.resource_id=Resources.id
-SET Resources.score = rg_scores.score;'
+SET Resources.score = rg_scores.score
+WHERE Resources.name='#{resource}'
+"
         @mysql.query(query)
       end
 
       def update_intersect_scores(resource = nil)
-          @mysql.query("DELETE Similarity FROM Similarity JOIN Resources ON Similarity.resource_id=Resources.id WHERE Resources.keybase='#{@key_base}'")
-          query = '
+        #TODO make this update resource by resource
+
+        @mysql.query("
+DELETE Similarity
+FROM Similarity
+JOIN Resources ON (Similarity.resource_id=Resources.id OR Similarity.similar_id=Resources.id)
+WHERE Resources.keybase='#{@key_base}'
+AND Resources.name='#{resource}'
+")
+        query = "
 INSERT INTO Similarity (resource_id, similar_id, intersect)
 SELECT intersect.l_id, intersect.r_id, intersect.score FROM
 (
   SELECT l.resource_id AS l_id, r.resource_id AS r_id, SUM(l.Score) + SUM(r.Score) AS score
   FROM ResourceGroup AS l
-  INNER JOIN ResourceGroup r ON l.group_id = r.group_id
-  WHERE l.resource_id < r.resource_id
+  INNER JOIN ResourceGroup r ON l.group_id=r.group_id
+  JOIN Resources ON (l.resource_id=Resources.id OR r.resource_id=Resources.id)
+  WHERE Resources.keybase='#{@key_base}'
+  AND Resources.name='#{resource}'
+  AND l.resource_id < r.resource_id
   GROUP BY l.resource_id, r.resource_id
 ) AS intersect
-ON DUPLICATE KEY UPDATE intersect = score;'
-          @mysql.query(query)
+ON DUPLICATE KEY UPDATE intersect = score"
+        @mysql.query(query)
       end
 
       def update_similarity(resource = nil, threshold = 0)
-        @mysql.transaction do |client|
 
-          query = "
+        query = "
 UPDATE Similarity
 JOIN Resources AS l ON Similarity.resource_id=l.id
 JOIN Resources AS r ON Similarity.similar_id=r.id
 SET Similarity.similarity = Similarity.intersect / (l.score + R.score)
-WHERE l.keybase='#{@key_base}' AND r.keybase='#{@key_base}'
+WHERE (l.name='#{resource}' OR r.name='#{resource}')
+AND l.keybase='#{@key_base}'
+AND r.keybase='#{@key_base}'
 AND Similarity.intersect / (l.score + R.score) > #{threshold};
 "
-          client.query(query)
-          # client.query("DELETE Similarity FROM Similarity JOIN Resources ON Similarity.resource_id=Resources.id WHERE Resources.keybase='#{@key_base}' AND Similarity.similarity <= #{threshold}")
+        @mysql.query(query)
+        # client.query("DELETE Similarity FROM Similarity JOIN Resources ON Similarity.resource_id=Resources.id WHERE Resources.keybase='#{@key_base}' AND Similarity.similarity <= #{threshold}")
 
-        end
       end
 
     end
