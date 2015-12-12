@@ -130,21 +130,22 @@ ORDER BY similarity DESC, name DESC
 
       private
 
-      def update_union_scores(resource = nil)
+      def update_union_scores(resource)
         query = "
 UPDATE Resources
 JOIN (
-  SELECT resource_id, SUM(score) AS score
+  SELECT resource_id, SUM(ResourceGroup.score) AS score
   FROM ResourceGroup
+  JOIN Resources ON ResourceGroup.resource_id=Resources.id
+  WHERE Resources.keybase='#{@key_base}' AND Resources.name='#{resource}'
   GROUP BY resource_id
 ) AS rg_scores ON rg_scores.resource_id=Resources.id
 SET Resources.score = rg_scores.score
-WHERE Resources.name='#{resource}'
 "
         @mysql.query(query)
       end
 
-      def update_intersect_scores(resource = nil)
+      def update_intersect_scores(resource)
         #TODO make this update resource by resource
 
         @mysql.query("
@@ -171,7 +172,7 @@ ON DUPLICATE KEY UPDATE intersect = score"
         @mysql.query(query)
       end
 
-      def update_similarity(resource = nil, threshold = 0)
+      def update_similarity(resource, threshold = 0)
 
         query = "
 UPDATE Similarity
@@ -184,7 +185,6 @@ AND r.keybase='#{@key_base}'
 AND Similarity.intersect / (l.score + R.score) > #{threshold};
 "
         @mysql.query(query)
-        # client.query("DELETE Similarity FROM Similarity JOIN Resources ON Similarity.resource_id=Resources.id WHERE Resources.keybase='#{@key_base}' AND Similarity.similarity <= #{threshold}")
 
       end
 
