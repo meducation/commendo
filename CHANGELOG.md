@@ -1,3 +1,6 @@
+# 2.0.0 / 2015-12-11
+* [FEATURE] Commendo can now use MySQL as a backend if you prefer it to Redis
+
 # 1.2.4 / 2015-12-09
 * [BUGFIX] Fixed bug with TagSet#empty? reporting empty when only one key present
 

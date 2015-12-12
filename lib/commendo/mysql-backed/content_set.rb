@@ -7,7 +7,6 @@ module Commendo
 
       def initialize(key_base, tag_set = nil)
         config_hash = Commendo.config.to_hash
-        config_hash[:flags] = Mysql2::Client::MULTI_STATEMENTS
         @mysql = Mysql2::Client.new(config_hash)
         @key_base = key_base
         @tag_set = tag_set

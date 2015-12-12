@@ -5,6 +5,7 @@ require 'commendo'
 require 'progressbar'
 
 filename = ARGV[0]
+key_base = ARGV[1]
 
 Commendo.config do |config|
   config.backend = :mysql
@@ -17,7 +18,7 @@ end
 client = Mysql2::Client.new(Commendo.config.to_hash)
 %w(ResourceGroup ResourceTag Similarity Groups Resources Tags).each {|table| client.query("DELETE FROM #{table};") }
 
-cs = Commendo::ContentSet.new(key_base: '')
+cs = Commendo::ContentSet.new(key_base: key_base)
 
 puts 'Loading.'
 file_length = `wc -l #{filename}`.to_i
@@ -34,8 +35,8 @@ pbar.finish
 puts "\nFinished loading"
 
 puts 'Calculating similarities'
-pbar = ProgressBar.new('Calculating similarity', total)
-cs.calculate_similarity do |key, i, total|
-  pbar.inc
-end
+pbar = ProgressBar.new('Calculating similarity', 2)
+pbar.inc
+cs.calculate_similarity
+pbar.inc
 pbar.finish

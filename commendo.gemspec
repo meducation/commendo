@@ -8,8 +8,8 @@ Gem::Specification.new do |spec|
   spec.version       = Commendo::VERSION
   spec.authors       = ['Rob Styles']
   spec.email         = ['rob.styles@dynamicorange.com']
-  spec.summary       = 'A Jaccard-similarity recommender using Redis sets'
-  spec.description   = 'A Jaccard-similarity recommender using Redis sets'
+  spec.summary       = 'A Jaccard-similarity recommender using Redis sets or MySQL'
+  spec.description   = 'A Jaccard-similarity recommender using Redis sets or MySQL'
   spec.homepage      = ''
   spec.license       = 'MIT'
 
