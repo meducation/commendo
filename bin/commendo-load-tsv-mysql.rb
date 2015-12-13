@@ -16,7 +16,7 @@ Commendo.config do |config|
   config.password = 'commendo123'
 end
 client = Mysql2::Client.new(Commendo.config.to_hash)
-client.query("DELETE FROM Resource WHERE keybase='#{key_base}';")
+client.query("DELETE FROM Resources WHERE keybase='#{key_base}';")
 cs = Commendo::ContentSet.new(key_base: key_base)
 
 puts 'Loading.'

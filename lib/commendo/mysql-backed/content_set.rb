@@ -42,7 +42,9 @@ module Commendo
         delete_prepared_query.execute(@key_base, resource)
       end
 
-      def calculate_similarity(threshold = 0)
+      def calculate_similarity(threshold = nil)
+        threshold = nil if threshold == 0
+        @threshold = threshold
       end
 
       def calculate_similarity_for_resource(resource, threshold = 0)
@@ -50,7 +52,8 @@ module Commendo
 
       def similar_to(resource, limit = DEFAULT_LIMIT)
         resource = [resource] unless resource.is_a? Array
-        results = @mysql.query(similar_to_prepared_query(@key_base, resource, limit))
+        results = @mysql.query(similar_to_query(@key_base, resource, limit)) if @threshold.nil?
+        results = @mysql.query(similar_to_with_threshold_query(@key_base, resource, @threshold, limit)) unless @threshold.nil?
         similar = results.map { |r| {resource: r['similar'], similarity: r['similarity'].round(3)} }
         return similar if resource.length == 1
         grouped = similar.group_by { |r| r[:resource] }
@@ -84,32 +87,32 @@ module Commendo
       private
 
       def add_single_prepared_query
-        @add_single_prepared_query ||= @mysql.prepare('INSERT INTO Resource (keybase, name, groupname, score) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE score = score + ?')
+        @add_single_prepared_query ||= @mysql.prepare('INSERT INTO Resources (keybase, name, groupname, score) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE score = score + ?')
       end
 
       def groups_prepared_query
-        @groups_prepared_query ||= @mysql.prepare('SELECT DISTINCT groupname FROM Resource WHERE keybase=? AND name=?')
+        @groups_prepared_query ||= @mysql.prepare('SELECT DISTINCT groupname FROM Resources WHERE keybase=? AND name=?')
       end
 
       def delete_prepared_query
-        @delete_prepared_query ||= @mysql.prepare('DELETE FROM Resource WHERE keybase = ? AND name = ?')
+        @delete_prepared_query ||= @mysql.prepare('DELETE FROM Resources WHERE keybase = ? AND name = ?')
       end
 
       def remove_from_groups_prepared_query(keybase, name, groups)
         "
-DELETE FROM Resource WHERE keybase = '#{keybase}' AND name = '#{name}' AND groupname IN (#{groups.map { |r| "'#{r}'" }.join(',')})"
+DELETE FROM Resources WHERE keybase = '#{keybase}' AND name = '#{name}' AND groupname IN (#{groups.map { |r| "'#{r}'" }.join(',')})"
       end
 
-      def similar_to_prepared_query(keybase, resources, limit)
+      def similar_to_query(keybase, resources, limit)
         "
 SELECT similar, intersect_score, l_union, r_union, intersect_score / (l_union + r_union) AS similarity
 FROM (
   SELECT r.name AS similar,
   SUM(l.score + r.score) AS intersect_score,
-  (SELECT SUM(score) FROM Resource WHERE keybase = l.keybase AND name = l.name) AS l_union,
-  (SELECT SUM(score) FROM Resource WHERE keybase = r.keybase AND name = r.name) AS r_union
-  FROM Resource AS l
-  JOIN Resource AS r ON l.keybase = r.keybase AND l.groupname = r.groupname
+  (SELECT SUM(score) FROM Resources WHERE keybase = l.keybase AND name = l.name) AS l_union,
+  (SELECT SUM(score) FROM Resources WHERE keybase = r.keybase AND name = r.name) AS r_union
+  FROM Resources AS l
+  JOIN Resources AS r ON l.keybase = r.keybase AND l.groupname = r.groupname
   WHERE l.keybase = '#{keybase}'
   AND l.name IN (#{resources.map { |r| "'#{r}'" }.join(',')})
   AND l.name <> r.name
@@ -118,6 +121,28 @@ FROM (
 ORDER BY similarity DESC, similar DESC
 LIMIT #{limit}"
       end
+
+      def similar_to_with_threshold_query(keybase, resources, threshold, limit)
+        "
+SELECT similar, intersect_score, l_union, r_union, similarity FROM (
+  SELECT similar, intersect_score, l_union, r_union, intersect_score / (l_union + r_union) AS similarity FROM (
+    SELECT r.name AS similar,
+    SUM(l.score + r.score) AS intersect_score,
+    (SELECT SUM(score) FROM Resources WHERE keybase = l.keybase AND name = l.name) AS l_union,
+    (SELECT SUM(score) FROM Resources WHERE keybase = r.keybase AND name = r.name) AS r_union
+    FROM Resources AS l
+    JOIN Resources AS r ON l.keybase = r.keybase AND l.groupname = r.groupname
+    WHERE l.keybase = '#{keybase}'
+    AND l.name IN (#{resources.map { |r| "'#{r}'" }.join(',')})
+    AND l.name <> r.name
+    GROUP BY l.name, r.name
+  ) AS similar_resources
+) AS similar
+WHERE similarity > #{threshold}
+ORDER BY similarity DESC, similar DESC
+LIMIT #{limit}"
+      end
+
 
     end
 
