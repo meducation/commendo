@@ -109,10 +109,12 @@ SELECT similar, intersect_score, l_union, r_union, intersect_score / (l_union + 
 FROM (
   SELECT r.name AS similar,
   SUM(l.score + r.score) AS intersect_score,
-  (SELECT SUM(score) FROM Resources WHERE keybase = l.keybase AND name = l.name) AS l_union,
-  (SELECT SUM(score) FROM Resources WHERE keybase = r.keybase AND name = r.name) AS r_union
+  l_us.union_score AS l_union,
+  r_us.union_score AS r_union
   FROM Resources AS l
   JOIN Resources AS r ON l.keybase = r.keybase AND l.groupname = r.groupname
+  JOIN UnionScores as l_us ON l_us.keybase = l.keybase AND l_us.name = l.name
+  JOIN UnionScores as r_us ON r_us.keybase = r.keybase AND r_us.name = r.name
   WHERE l.keybase = '#{keybase}'
   AND l.name IN (#{resources.map { |r| "'#{r}'" }.join(',')})
   AND l.name <> r.name
