@@ -6,6 +6,7 @@ module Commendo
     def initialize(args)
       @backend = RedisBacked::WeightedGroup.new(args[:key_base], *args[:content_sets]) if Commendo.config.backend == :redis
       @backend = MySqlBacked::WeightedGroup.new(args[:key_base], *args[:content_sets]) if Commendo.config.backend == :mysql
+      @backend = RubyBacked::WeightedGroup.new(args[:key_base], *args[:content_sets]) if Commendo.config.backend == :ruby
       raise 'Unrecognised backend type, try :redis or :mysql' if @backend.nil?
     end
 

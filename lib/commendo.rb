@@ -17,6 +17,10 @@ require 'commendo/mysql-backed/content_set'
 require 'commendo/mysql-backed/tag_set'
 require 'commendo/mysql-backed/weighted_group'
 
+require 'commendo/ruby-backed/content_set'
+require 'commendo/ruby-backed/tag_set'
+require 'commendo/ruby-backed/weighted_group'
+
 module Commendo
 
   def self.config
