@@ -6,9 +6,10 @@ require 'progressbar'
 
 def timer(msg)
   start = Time.now
-  yield
+  value = yield
   finish = Time.now
   $stderr.puts "#{msg} took #{finish - start}"
+  return value
 end
 
 infile = ARGV[0]
@@ -33,13 +34,14 @@ timer('calculate_similarity') do
   cs.calculate_similarity
 end
 
-$stderr.puts "Selecting #{limit} random names to use"
-names_to_query = resource_to_sets.map { |resource, sets| resource }.sort_by { rand }.first(limit)
-
-pbar = ProgressBar.new('Querying similar_to', names_to_query.length)
-names_to_query.each do |name|
-  cs.similar_to(name)
-  pbar.inc
+names_to_query = timer("Select #{limit} random names to use") do
+  resource_to_sets.map { |resource, sets| resource }.sort_by { rand }.first(limit)
 end
-pbar.finish
+
+# pbar = ProgressBar.new('Querying similar_to', names_to_query.length)
+names_to_query.each do |name|
+  timer('Similarity') { cs.similar_to(name) }
+  # pbar.inc
+end
+# pbar.finish
 

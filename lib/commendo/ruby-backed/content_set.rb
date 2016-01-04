@@ -11,6 +11,7 @@ module Commendo
         @resource_group_score = Hash.new { |h, k| h[k] = Hash.new { |h, k| h[k] = 0 } }
         @key_base = key_base
         @tag_set = tag_set
+        @threshold = nil
       end
 
       def add_by_group(group, *resources)
@@ -42,7 +43,9 @@ module Commendo
 
       def delete(resource)
         resource = resource.to_s
+        @resource_group_score[resource].each { |group,score| @group_resource_scores[group].delete(resource) }
         @resource_group_score.delete(resource)
+        @resource_totals.delete(resource)
       end
 
       def calculate_similarity_for_resource(resource, threshold = 0)
@@ -63,6 +66,24 @@ module Commendo
       end
 
       def similar_to(resource, limit = DEFAULT_LIMIT)
+        if resource.is_a? Array
+          return similar_to_array(resource, limit)
+        else
+          return similar_to_single(resource, limit)
+        end
+      end
+
+      def similar_to_array(resources, limit)
+        similar = resources.flat_map { |r| similar_to_single(r, limit) }
+        similar = similar.group_by { |h| h[:resource] }
+        similar = similar.map { |resource, sims| {resource: resource, similarity: sims.inject(0) { |sum, sim| sum += sim[:similarity] }} }
+        similar.map! { |h| {resource: h[:resource], similarity: h[:similarity].round(3)} }
+        similar.keep_if { |sim| @threshold.nil? || sim[:similarity] > @threshold }
+        similar = similar.sort_by { |h| [h[:similarity], h[:resource]] }.reverse.first(limit)
+        similar
+      end
+
+      def similar_to_single(resource, limit)
         resource = resource.to_s
         my_groups = @resource_group_score[resource]
 
@@ -76,8 +97,9 @@ module Commendo
           end
         end
 
-        similar.map { |resource, similarity| {resource: resource, similarity: similarity.round(3)} }.sort_by { |h| [h[:similarity], h[:resource]] }.reverse.first(limit)
-
+        similar = similar.map { |resource, similarity| {resource: resource, similarity: similarity.round(3)} }.sort_by { |h| [h[:similarity], h[:resource]] }.reverse.first(limit)
+        similar.keep_if { |sim| @threshold.nil? || sim[:similarity] > @threshold }
+        similar
       end
 
       def filtered_similar_to(resource, options = {})
